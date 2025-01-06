@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 
+import os
+from dotenv import load_dotenv
+
+# .dotenv 파일 로드
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,6 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "temp",
 ]
 
 MIDDLEWARE = [
@@ -76,10 +83,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("MYSQL_DATABASE"),  # .dotenv에서 MYSQL_DATABASE 값 가져오기
+        "USER": os.getenv("MYSQL_USER"),      # .dotenv에서 MYSQL_USER 값 가져오기
+        "PASSWORD": os.getenv("MYSQL_PASSWORD"),  # .dotenv에서 MYSQL_PASSWORD 값 가져오기
+        "HOST": "mysqldb",  # MySQL 서버 주소 (로컬 환경에서는 'localhost')
+        "PORT": "3306",  # MySQL 기본 포트
     }
 }
+# django - local, Mysql - docker : host가 localhost
+# 둘 다 도커면 container 이름인 mysqldb
 
 
 # Password validation
