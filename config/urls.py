@@ -46,5 +46,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('temp.urls')),  # API 엔드포인트 연결
     #path('', include('temp.urls')),
-    path('swagger/', schema_view.as_view()), # Swagger UI 경로
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),  # Swagger UI
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),  # Redoc
 ]
