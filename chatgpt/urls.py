@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
+from .views import TranslateAPIView
 
 urlpatterns = [
-    path("translate/", views.TranslateAPIView.as_view(), name="translate"),
+    path("translate/", TranslateAPIView.as_view(), name="translate"),
 ]
