@@ -93,7 +93,16 @@ DATABASES = {
 }
 # django - local, Mysql - docker : host가 localhost
 # 둘 다 도커면 container 이름인 mysqldb
+import redis
 
+redis_client = redis.StrictRedis(
+    host=os.getenv("REDIS_HOST", "redis"),  # 기본값: "redis"
+    port=int(os.getenv("REDIS_PORT", 6379)),  # 기본값: 6379
+    db=0
+)
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
