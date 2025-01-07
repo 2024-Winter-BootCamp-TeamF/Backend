@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Item</title>
+</head>
+<body>
+    <h1>Are you sure you want to delete "{{ item.title }}"?</h1>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Yes, delete</button>
+    </form>
+    <a href="/">Cancel</a>
+</body>
+</html>

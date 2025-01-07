@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Item Form</title>
+</head>
+<body>
+    <h1>{{ item.id|default:"Create New Item" }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" value="{{ item.title|default:'' }}">
+        </p>
+        <p>
+            <label for="description">Description:</label>
+            <textarea id="description" name="description">{{ item.description|default:'' }}</textarea>
+        </p>
+        <button type="submit">Save</button>
+    </form>
+    <a href="/">Cancel</a>
+</body>
+</html>

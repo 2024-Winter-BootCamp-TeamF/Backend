@@ -20,4 +20,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('temp.urls')),  # API 엔드포인트 연결
+    path('', include('temp.urls')),
 ]
