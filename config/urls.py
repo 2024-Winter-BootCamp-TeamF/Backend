@@ -17,8 +17,34 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from rest_framework import routers, permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+from temp import views
+from temp.views import ItemViewSet
+
+# Swagger UI 설정
+schema_view = get_schema_view(
+    openapi.Info(
+        title="CRUD", # 제목
+        default_version='v1', # 버전
+        description="CRUD practice for the project", # 설명
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email="contact@myapi.local"),
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    permission_classes=[permissions.AllowAny],
+)
+
+# API 라우팅 설정
+router = routers.DefaultRouter()
+#router.register(r'items', ItemViewSet)
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('temp.urls')),  # API 엔드포인트 연결
-    path('', include('temp.urls')),
+    #path('', include('temp.urls')),
+    path('swagger/', schema_view.as_view()), # Swagger UI 경로
 ]

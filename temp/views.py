@@ -4,6 +4,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 # Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import serializers, viewsets
+from .models import Item  # 모델 임포트
+from .serializers import ItemSerializer  # 정의한 ItemSerializer import
 
 from .models import Item
 
@@ -41,3 +44,14 @@ def item_delete(request, pk):
         item.delete()
         return redirect('item_list')
     return render(request, 'temp/item_form.html', {'item': item})
+
+# 모델에 대한 Serializer 작성
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = ['id', 'title', 'description']
+
+# CRUD 기능을 위한 ViewSet 작성
+class ItemViewSet(viewsets.ModelViewSet):
+    queryset = Item.objects.all() # Item 모델의 모든 객체를 쿼리셋으로 사용
+    serializer_class = ItemSerializer # ItemSerializer를 사용
