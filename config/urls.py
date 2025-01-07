@@ -48,4 +48,6 @@ urlpatterns = [
     #path('', include('temp.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),  # Swagger UI
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),  # Redoc
+    # GPT
+    path("chatgpt/", include("chatgpt.urls")),
 ]

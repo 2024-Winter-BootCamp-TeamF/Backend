@@ -15,6 +15,9 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+from datetime import timedelta
+from chatgpt import config
+
 # .dotenv 파일 로드
 load_dotenv()
 
@@ -26,7 +29,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-5l21ga@l5#j1r_$5i%-b@5j%@p0c==1o8rt9v)xo07qiv(4w#="
+SECRET_KEY = config.SECRET_KEY
+OPENAI_API_KEY = config.OPENAI_API_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -46,6 +50,7 @@ INSTALLED_APPS = [
     "rest_framework", # djangorestframework
     "drf_yasg", # Swagger
     "temp",
+    "chatgpt",
 ]
 
 MIDDLEWARE = [
