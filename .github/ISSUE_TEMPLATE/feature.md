@@ -1,7 +1,7 @@
 ---
 name: "✨ feature"
 about: 새로운 기능을 구현하거나 수정합니다.
-title: "[feature] "
+title: "[feat] "
 labels: ''
 assignees: ''
 
