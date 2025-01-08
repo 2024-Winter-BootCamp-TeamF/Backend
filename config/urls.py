@@ -21,5 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('temp.urls')),
     path('api/', include('temp.pdf.urls')),
+    path('docs/', include('swagger.urls')),
     # API 엔드포인트 연결
 ]

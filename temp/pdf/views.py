@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.utils import json
 from rest_framework.views import APIView
-
+from swagger.file_upload_docs import pdf_upload_doc
+from rest_framework.parsers import MultiPartParser
 from temp.pdf.models import UploadedPDF
 from temp.pdf.utils import extract_and_store_pdf_to_redis
 
@@ -15,6 +16,8 @@ redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
 
 class PDFUploadView(APIView):
     """PDF 파일 업로드 및 텍스트 추출"""
+    parser_classes = [MultiPartParser]
+    @pdf_upload_doc
     def post(self, request):
         uploaded_file = request.FILES['file']
         file_instance = UploadedPDF(file=uploaded_file, file_name=uploaded_file.name)
@@ -26,7 +29,7 @@ class PDFUploadView(APIView):
             for chunk in uploaded_file.chunks():
                 f.write(chunk)
 
-        # PyMuPDF4LLM으로 텍스트 추출 및 Redis 저장
+        # 텍스트 추출 및 Redis 저장
         try:
             total_pages = extract_and_store_pdf_to_redis(pdf_path, file_instance.id)
         except Exception as e:
