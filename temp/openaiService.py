@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # OpenAI API 키 설정
-openai.api_key = os.getenv("OpenAI_API_KEY")
+openai.api_key = os.getenv("OpenAI_API_Key")
 
 # OpenAI 요청 처리 함수
 def ask_openai(prompt: str, model: str = "gpt-3.5-turbo", max_tokens: int = 150, temperature: float = 0.7) -> dict:
