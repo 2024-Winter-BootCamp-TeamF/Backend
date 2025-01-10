@@ -3,7 +3,7 @@ name = "winter-teamf-backend"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "woohyun23",email = "parkwh0823@gmail.com"}
+    {name = "woohyun23", email = "parkwh0823@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.12"
@@ -16,9 +16,12 @@ dependencies = [
     "pymupdf4llm (>=0.0.17,<0.0.18)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "python-decouple (>=3.8,<4.0)",
-    "drf-yasg (>=1.21.8,<2.0.0)"
+    "drf-yasg (>=1.21.8,<2.0.0)",
+    "openai (>=0.28.0,<1.0.0)"
+
 ]
 
+packages = ["winter_teamf_backend"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
