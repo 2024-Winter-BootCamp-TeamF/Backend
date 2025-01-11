@@ -28,4 +28,7 @@ urlpatterns = [
 
     # Swagger UI
     path('docs/', include('swagger.urls')),
+
+    # User
+    path('api/', include('user.urls')),
 ]
