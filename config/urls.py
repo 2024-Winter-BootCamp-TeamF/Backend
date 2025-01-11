@@ -19,8 +19,13 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # temp 앱의 기본 API
     path('api/', include('temp.urls')),
-    path('api/', include('temp.pdf.urls')),
+
+    # temp.pdf 관련 API, test 디렉터리와 url이 같아 뒤에 /pdf 추가
+    path('api/pdf/', include('temp.pdf.urls')),
+
+    # Swagger UI
     path('docs/', include('swagger.urls')),
-    # API 엔드포인트 연결
 ]
