@@ -1,8 +1,6 @@
 from django.urls import path
-from .views import hello_view
-from .views import OpenAIView
+from .views import ProcessRedisDataView
 
 urlpatterns = [
-    path('hello/', hello_view, name='hello'),
-    path('openai/', OpenAIView.as_view(), name='openai'),
+    path('process/', ProcessRedisDataView.as_view(), name='process-redis-data'),
 ]
