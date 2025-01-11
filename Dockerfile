@@ -12,6 +12,10 @@ WORKDIR /backend
 
 # 시스템 패키지 업데이트 및 필수 패키지 설치
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice \
+    fonts-nanum \
+    fonts-dejavu-core \
+    fonts-liberation \
     gcc \
     libpq-dev \
     pkg-config \
