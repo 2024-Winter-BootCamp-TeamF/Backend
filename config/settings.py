@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'user',
     'rest_framework.authtoken',
+    'practice',
+    'practice.pdf'
 ]
 
 MIDDLEWARE = [

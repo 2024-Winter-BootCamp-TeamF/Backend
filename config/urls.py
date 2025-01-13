@@ -31,4 +31,8 @@ urlpatterns = [
 
     # User
     path('api/', include('user.urls')),
+
+    # 연습문제
+    path('api/practice/', include('practice.urls')),
+    path('api/practice/', include('practice.pdf.urls')),
 ]
