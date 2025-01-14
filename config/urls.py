@@ -31,4 +31,7 @@ urlpatterns = [
 
     # User
     path('api/', include('user.urls')),
+
+    path("api/pinecone/", include("temp.pinecone.urls")),
+
 ]
