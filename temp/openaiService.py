@@ -8,7 +8,35 @@ load_dotenv()
 # OpenAI API 키 설정
 openai.api_key = os.getenv("OpenAI_API_Key")
 
+def get_embedding(text, model="text-embedding-ada-002"):
+    """
+    OpenAI 임베딩을 생성하는 함수
+    """
+    try:
+        # text가 문자열인지 확인
+        if not isinstance(text, str):
+            raise ValueError(f"Expected 'text' to be a string, but got {type(text).__name__}")
 
+        # 텍스트가 비어있거나 None인 경우 예외 처리
+        if not text.strip():
+            raise ValueError("Text for embedding cannot be empty or null.")
+
+        # 텍스트 길이가 너무 긴 경우 자르기
+        max_tokens = 8191  # text-embedding-ada-002 모델의 최대 토큰 수 제한
+        if len(text) > max_tokens:
+            text = text[:max_tokens]
+
+        # OpenAI API 호출
+        response = openai.Embedding.create(
+            input=text,
+            model=model
+        )
+
+        # 임베딩 벡터 반환
+        return response["data"][0]["embedding"]
+
+    except Exception as e:
+        raise ValueError(f"Failed to generate embedding: {str(e)}")
 def ask_openai(prompt: str, model: str = "gpt-4", max_tokens: int = 150, temperature: float = 0.7) -> dict:
     """
     OpenAI API와 통신하여 답변을 반환합니다.
