@@ -12,6 +12,33 @@ def get_pinecone_instance():
     return Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     # return Pinecone(api_key=api_key)
 
+def list_all_indexes(instance):
+    """
+    Pinecone에 저장된 모든 인덱스 이름 반환
+    """
+    try:
+        indexes = instance.list_indexes()
+        return indexes
+    except Exception as e:
+        return {"error": f"Failed to list indexes: {str(e)}"}
+
+def list_ids_in_index(instance, index_name):
+    """
+    특정 인덱스의 모든 ID 반환
+    """
+    try:
+        index = instance.Index(index_name)
+        stats = index.desribe_index_stats()
+
+        # 모든 ID 수집
+        ids = []
+        for namespace, data in stats.get("namespace", {}).items():
+            ids.extend(data.get("vector_count", [])) # 벡터 개수 기반으로 ID 추출
+
+        return ids
+    except Exception as e:
+        return {"error": f"Failed to list IDs in index '{index_name}': {str(e)}"}
+
 
 def get_pinecone_index(instance, index_name):
     """
@@ -77,3 +104,55 @@ def store_in_pinecone(instance, index_name, redis_client):
 
     except Exception as e:
         return {"error": f"Failed to upload to Pinecone: {str(e)}"}
+
+def fetch_from_pinecone_by_id(instance, index_name, doc_id):
+    """
+    Pinecone에서 특정 ID로 데이터 조회
+    """
+    try:
+        index = instance.Index(index_name)
+        result = index.fetch(ids=[doc_id])
+
+        if not result or "vectors" not in result:
+            return f"No data found for ID: {doc_id}"
+
+        vector_data = result["vectors"].get(doc_id)
+        if vector_data:
+            metadata = vector_data.get("metadata", {})
+            vector = vector_data.get("values", [])
+            return {"id": doc_id, "metadata": metadata, "vector": vector}
+        else:
+            return f"No data found for ID: {doc_id}"
+    except Exception as e:
+        return f"Error fetching data for ID {doc_id}: {str(e)}"
+
+if __name__ == "__main__":
+    # Pinecone 초기화
+    pinecone_instance = get_pinecone_instance()
+
+    # 모든 인덱스 조회
+    all_indexes = list_all_indexes(pinecone_instance)
+    if isinstance(all_indexes, dict) and "error" in all_indexes:
+        print(all_indexes["error"])
+    else:
+        print(f"Indexes found: {all_indexes}")
+
+        # 각 인덱스의 모든 ID 조회
+        for index_name in all_indexes:
+            ids = list_ids_in_index(pinecone_instance, index_name)
+            if isinstance(ids, dict) and "error" in ids:
+                print(f"Error in index '{index_name}': {ids['error']}")
+            else:
+                print(f"Index '{index_name}' contains IDs: {ids}")
+
+    # Pinecone 인덱스 가져오기
+    pinecone_index = get_pinecone_index(pinecone_instance, index_name)
+
+    # 특정 ID로 데이터 조회
+    test_doc_id = "test_doc_id" # 조회할 ID로 교체
+    document_data = fetch_from_pinecone_by_id(pinecone_index, index_name, test_doc_id)
+
+    # 결과 출력
+    print(f"Document data for ID '{test_doc_id}': {document_data}")
+
+
