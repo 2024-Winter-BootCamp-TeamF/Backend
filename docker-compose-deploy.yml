@@ -1,0 +1,64 @@
+#Docker 컨테이너를 정의하고 관리하기 위해 구성 파일
+#여러 컨테이너와 한 곳에 정리 할 수 있게 해줌
+#파일 버전
+version: '3.8'
+services:
+    django:
+        build:
+            context: ./
+        container_name: django
+        command: >
+          sh -c "python manage.py makemigrations &&
+                python manage.py migrate &&
+                python manage.py runserver 0.0.0.0:8000"
+        ports:
+            - "8000:8000"
+        restart: always
+        depends_on:
+            - mysqldb
+        env_file:
+            - .env
+        volumes:
+            - './:/backend'  # 수정: 로컬 프로젝트 루트 디렉토리를 컨테이너의 /backend와 연결
+        networks:
+            - app-tier
+
+    mysqldb:
+        image: mysql:latest
+        env_file:
+            - .env
+        ports:
+            - '3305:3306'
+        volumes:
+            - 'mysqldata:/var/lib/mysql' # 수정: mysqldata를 로컬 디렉토리 './data/mysql'에 매핑
+        restart: always
+        networks:
+            - app-tier
+
+    phpmyadmin:
+        image: phpmyadmina
+        restart: always
+        links:
+          - mysqldb
+        ports:
+          - 80:80
+        environment:
+          PMA_ARBITRARY: 1
+          PMA_HOST: mysqldb
+          PMA_PORT: 3306
+        networks:
+          - app-tier
+
+    redis:
+        image: redis:alpine
+        container_name: redis
+        ports:
+         - "6379:6379"
+        networks:
+        - app-tier
+volumes:
+    mysqldata:  # 로컬 디렉토리를 지정했으므로, 익명 볼륨 제거 가능
+
+networks:
+    app-tier:
+        driver: bridge
