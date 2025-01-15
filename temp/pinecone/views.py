@@ -56,6 +56,9 @@ class UploadAllToPineconeView(APIView):
                     vector = get_embedding(text)
                     index.upsert([(key.decode('utf-8'), vector, {"page_number": page_content["page_number"]})])
 
+                    # Redis에서 해당 키 삭제
+                    redis_client.delete(key)
+
                 except Exception as e:
                     print(f"Failed to process key {key}: {str(e)}")
                     continue
