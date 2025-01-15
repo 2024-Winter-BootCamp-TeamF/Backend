@@ -33,3 +33,4 @@ def get_pinecone_index(instance, index_name):
 
     # 기존 인덱스를 가져옴
     return instance.Index(index_name)
+
