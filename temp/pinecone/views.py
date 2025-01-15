@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .service import get_pinecone_index, store_in_pinecone, get_pinecone_instance
+from .service import get_pinecone_index, store_in_pinecone, get_pinecone_instance, list_all_indexes, list_ids_in_index, fetch_from_pinecone_by_id
 from ..openaiService import get_embedding
 
 # Redis 클라이언트 설정
@@ -64,3 +64,90 @@ class UploadAllToPineconeView(APIView):
 
         except Exception as e:
             return Response({"error": f"Failed to upload to Pinecone: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ListAllIndexesView(APIView):
+    """
+    Pinecone에 저장된 모든 인덱스 이름을 반환하는 API
+    """
+
+    @swagger_auto_schema(
+        operation_description="List all Pinecone indexes",
+        responses={
+            200: openapi.Response(description="Indexes retrieved successfully", schema=openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING))),
+            500: openapi.Response(description="Internal server error")
+        }
+    )
+    def get(self, request):
+        try:
+            instance = get_pinecone_instance()
+            indexes = list_all_indexes(instance)
+            if isinstance(indexes, dict) and "error" in indexes:
+                return Response(indexes, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(indexes, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Failed to retrieve indexes: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ListIDsInIndexView(APIView):
+    """
+    특정 Pinecone 인덱스의 모든 ID를 반환하는 API
+    """
+
+    @swagger_auto_schema(
+        operation_description="List all IDs in a specific Pinecone index",
+        manual_parameters=[
+            openapi.Parameter('index_name', openapi.IN_QUERY, description="The name of the Pinecone index", type=openapi.TYPE_STRING, required=True)
+        ],
+        responses={
+            200: openapi.Response(description="IDs retrieved successfully", schema=openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING))),
+            404: openapi.Response(description="Index not found"),
+            500: openapi.Response(description="Internal server error")
+        }
+    )
+    def get(self, request):
+        index_name = request.query_params.get('index_name')
+        if not index_name:
+            return Response({"error": "index_name parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            instance = get_pinecone_instance()
+            ids = list_ids_in_index(instance, index_name)
+            if isinstance(ids, dict) and "error" in ids:
+                return Response(ids, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(ids, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Failed to retrieve IDs: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class FetchDataByIDView(APIView):
+    """
+    특정 ID로 Pinecone에서 데이터를 조회하는 API
+    """
+
+    @swagger_auto_schema(
+        operation_description="Fetch data by ID from a specific Pinecone index",
+        manual_parameters=[
+            openapi.Parameter('index_name', openapi.IN_QUERY, description="The name of the Pinecone index", type=openapi.TYPE_STRING, required=True),
+            openapi.Parameter('doc_id', openapi.IN_QUERY, description="The document ID to fetch", type=openapi.TYPE_STRING, required=True)
+        ],
+        responses={
+            200: openapi.Response(description="Data retrieved successfully", schema=openapi.Schema(type=openapi.TYPE_OBJECT)),
+            404: openapi.Response(description="ID not found"),
+            500: openapi.Response(description="Internal server error")
+        }
+    )
+    def get(self, request):
+        index_name = request.query_params.get('index_name')
+        doc_id = request.query_params.get('doc_id')
+        if not index_name or not doc_id:
+            return Response({"error": "index_name and doc_id parameters are required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            instance = get_pinecone_instance()
+            data = fetch_from_pinecone_by_id(instance, index_name, doc_id)
+            if isinstance(data, str) and "Error" in data:
+                return Response({"error": data}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if isinstance(data, str) and "No data" in data:
+                return Response({"error": data}, status=status.HTTP_404_NOT_FOUND)
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Failed to fetch data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
