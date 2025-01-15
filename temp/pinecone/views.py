@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .service import get_pinecone_index, store_in_pinecone, get_pinecone_instance
+from .service import get_pinecone_index, get_pinecone_instance
 from ..openaiService import get_embedding
 
 # Redis 클라이언트 설정
