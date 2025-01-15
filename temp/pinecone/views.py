@@ -80,7 +80,7 @@ class QueryFromPineconeView(APIView):
                 type=openapi.TYPE_OBJECT,
                 properties={
                     "id": openapi.Schema(type=openapi.TYPE_STRING, description="Pinecone record ID"),
-                    "values": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_NUMBER)),
+                    "text": openapi.Schema(type=openapi.TYPE_STRING, description="Original text data"),
                     "metadata": openapi.Schema(type=openapi.TYPE_OBJECT, description="Metadata associated with the record")
                 }
             )),
@@ -103,10 +103,20 @@ class QueryFromPineconeView(APIView):
                 return Response({"error": "Data not found for the given Redis key."}, status=status.HTTP_404_NOT_FOUND)
 
             data = result["vectors"][redis_key]
+            vector_metadata = data.get("metadata")
+
+            # Redis에서 원본 텍스트 데이터 가져오기
+            redis_data = redis_client.get(redis_key)
+            if redis_data:
+                page_content = json.loads(redis_data.decode('utf-8'))
+                original_text = page_content.get("text", "No text available")
+            else:
+                original_text = "Original text not found in Redis."
+
             return Response({
                 "id": redis_key,
-                "values": data.get("values"),
-                "metadata": data.get("metadata")
+                "text": original_text,
+                "metadata": vector_metadata
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
