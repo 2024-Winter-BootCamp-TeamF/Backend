@@ -30,7 +30,7 @@ urlpatterns = [
     path('docs/', include('swagger.urls')),
 
     # User
-    path('api/', include('user.urls')),
+    path('api/user/', include('user.urls')),
 
     path("api/pinecone/", include("temp.pinecone.urls")),
 

@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User # User 모델
-from django.contrib.auth.password_validation import validate_password # Django의 기본 pw 검증 도구
+# from django.contrib.auth.password_validation import validate_password # Django의 기본 pw 검증 도구
 
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token # Token 모델
@@ -14,23 +14,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
         required=True,
-        validators=[validate_password], # 비밀번호에 대한 검증
+        # validators=[validate_password], # 비밀번호에 대한 검증
     )
-    password2 = serializers.CharField( # 비밀번호 확인을 위한 필드
-        write_only=True,
-        required=True,
-    )
+    # password2 = serializers.CharField( # 비밀번호 확인을 위한 필드
+    #     write_only=True,
+    #     required=True,
+    # )
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'password2')
+        fields = ('username', 'password')
 
-    def validate(self, data):  # password과 password2의 일치 여부 확인
-        if data['password'] != data['password2']:
-            raise serializers.ValidationError(
-                {"password": "Password fields didn't match."})
-
-        return data
+    # def validate(self, data):  # password과 password2의 일치 여부 확인
+    #     if data['password'] != data['password2']:
+    #         raise serializers.ValidationError(
+    #             {"password": "Password fields didn't match."})
+    #
+    #     return data
 
     def create(self, validated_data):
         # CREATE 요청에 대해 create 메서드를 오버라이딩하여, 유저를 생성하고 토큰도 생성하게 해준다.
