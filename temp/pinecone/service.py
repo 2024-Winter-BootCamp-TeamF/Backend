@@ -32,12 +32,23 @@ def get_pinecone_index(instance, index_name):
     return instance.Index(index_name)
 
 
-def query_pinecone_metadata(instance, index_name, redis_key):
+def query_pinecone_data(instance, index_name, redis_key):
     """
-    Pinecone에서 특정 Redis 키와 연관된 메타데이터를 조회
+    Pinecone에서 특정 Redis 키와 연관된 데이터 조회
     """
     index = get_pinecone_index(instance, index_name)
     result = index.fetch(ids=[redis_key])
     if not result or redis_key not in result["vectors"]:
         return None
     return result["vectors"][redis_key]
+
+def query_pinecone_original_text(instance, index_name, redis_key):
+    """
+    Pinecone에서 특정 Redis 키와 연관된 메타데이터 중 original_text를 조회
+    """
+    index = get_pinecone_index(instance, index_name)
+    result = index.fetch(ids=[redis_key])
+    if not result or redis_key not in result["vectors"]:
+        return None
+    metadata = result["vectors"][redis_key].get("metadata", {})
+    return metadata.get("original_text")

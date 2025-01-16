@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .service import get_pinecone_index, get_pinecone_instance, query_pinecone_metadata
+from .service import get_pinecone_index, get_pinecone_instance, query_pinecone_data, query_pinecone_original_text
 from temp.openaiService import get_embedding
 
 # Redis 클라이언트 설정
@@ -117,7 +117,7 @@ class QueryFromPineconeView(APIView):
         try:
             instance = get_pinecone_instance()
             index_name = os.getenv("PINECONE_INDEX_NAME", "pdf-index")
-            data = query_pinecone_metadata(instance, index_name, redis_key)
+            data = query_pinecone_data(instance, index_name, redis_key)
 
             if not data:
                 return Response({"error": "Data not found for the given Redis key."}, status=status.HTTP_404_NOT_FOUND)
@@ -130,3 +130,5 @@ class QueryFromPineconeView(APIView):
 
         except Exception as e:
             return Response({"error": f"Failed to query Pinecone: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
