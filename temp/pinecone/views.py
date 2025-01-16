@@ -1,3 +1,4 @@
+# views.py
 import os
 import redis
 import json
@@ -7,7 +8,6 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .service import get_pinecone_index, get_pinecone_instance
-from pinecone import QueryResponse
 from temp.openaiService import get_embedding
 
 # Redis 클라이언트 설정
@@ -42,9 +42,12 @@ class UploadAllToPineconeView(APIView):
                     continue
 
                 try:
+                    # Redis에서 데이터 로드
                     page_content = json.loads(page_data.decode('utf-8'))
                     text_field = page_content.get("text")
+                    file_name = page_content.get("file_name", "unknown")  # 파일 이름 기본값 설정
 
+                    # 텍스트 처리
                     if isinstance(text_field, dict) and "text" in text_field:
                         text = text_field["text"]
                     elif isinstance(text_field, str):
@@ -52,8 +55,21 @@ class UploadAllToPineconeView(APIView):
                     else:
                         raise ValueError(f"Invalid 'text' format in Redis data for key {key}")
 
+                    # 벡터 생성
                     vector = get_embedding(text)
-                    index.upsert([(key.decode('utf-8'), vector, {"page_number": page_content["page_number"]})])
+
+                    # Pinecone에 업로드
+                    index.upsert([
+                        (
+                            key.decode('utf-8'),  # Redis 키를 ID로 사용
+                            vector,  # 생성된 벡터
+                            {  # 메타데이터
+                                "page_number": page_content.get("page_number"),
+                                "file_name": file_name,  # 파일 제목 저장
+                                "original_text": text  # 원본 텍스트 저장
+                            }
+                        )
+                    ])
 
                 except Exception as e:
                     print(f"Failed to process key {key}: {str(e)}")
@@ -66,6 +82,7 @@ class UploadAllToPineconeView(APIView):
 
         except Exception as e:
             return Response({"error": f"Failed to upload to Pinecone: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class QueryFromPineconeView(APIView):
     """
@@ -110,7 +127,7 @@ class QueryFromPineconeView(APIView):
             return Response({
                 "id": redis_key,
                 "values": data.get("values"),
-                "metadata": data.get("metadata")
+                "metadata": data.get("metadata")  # 메타데이터 반환
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
