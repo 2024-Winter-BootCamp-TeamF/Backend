@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .service import get_pinecone_index, get_pinecone_instance
+from .service import get_pinecone_index, get_pinecone_instance, query_pinecone_metadata
 from temp.openaiService import get_embedding
 
 # Redis 클라이언트 설정
@@ -117,13 +117,11 @@ class QueryFromPineconeView(APIView):
         try:
             instance = get_pinecone_instance()
             index_name = os.getenv("PINECONE_INDEX_NAME", "pdf-index")
-            index = get_pinecone_index(instance, index_name)
+            data = query_pinecone_metadata(instance, index_name, redis_key)
 
-            result = index.fetch(ids=[redis_key])
-            if not result or redis_key not in result["vectors"]:
+            if not data:
                 return Response({"error": "Data not found for the given Redis key."}, status=status.HTTP_404_NOT_FOUND)
 
-            data = result["vectors"][redis_key]
             return Response({
                 "id": redis_key,
                 "values": data.get("values"),

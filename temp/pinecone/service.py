@@ -1,8 +1,6 @@
+### service.py
 import os
-import json
 from pinecone import Pinecone, ServerlessSpec
-from temp.openaiService import get_embedding
-
 
 # Pinecone 초기화
 def get_pinecone_instance():
@@ -10,7 +8,6 @@ def get_pinecone_instance():
     Pinecone 인스턴스를 생성
     """
     return Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-    # return Pinecone(api_key=api_key)
 
 
 def get_pinecone_index(instance, index_name):
@@ -34,3 +31,13 @@ def get_pinecone_index(instance, index_name):
     # 기존 인덱스를 가져옴
     return instance.Index(index_name)
 
+
+def query_pinecone_metadata(instance, index_name, redis_key):
+    """
+    Pinecone에서 특정 Redis 키와 연관된 메타데이터를 조회
+    """
+    index = get_pinecone_index(instance, index_name)
+    result = index.fetch(ids=[redis_key])
+    if not result or redis_key not in result["vectors"]:
+        return None
+    return result["vectors"][redis_key]
