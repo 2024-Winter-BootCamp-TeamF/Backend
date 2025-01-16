@@ -33,6 +33,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Token': {
+            'type': 'apiKey',
+            'name': 'Authorization',  # 인증 헤더 이름
+            'in': 'header',
+            'description': 'Enter token like: Token <your_token>'
+        }
+    },
+    'USE_SESSION_AUTH': False,  # 세션 인증 비활성화
+}
+
 
 # Application definition
 

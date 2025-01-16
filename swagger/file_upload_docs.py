@@ -10,12 +10,19 @@ pdf_upload_doc = swagger_auto_schema(
             description="The PDF file to upload",
             type=openapi.TYPE_FILE,
             required=True
-        )
+        ),
+        openapi.Parameter(
+            'Authorization',
+            openapi.IN_HEADER,
+            description="Token <your_token>",  # 인증 헤더 추가
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
     ],
     responses={
         201: openapi.Response("File uploaded and text extracted successfully"),
         400: openapi.Response("No file provided"),
+        401: openapi.Response("Unauthorized: Token is missing or invalid"),
         500: openapi.Response("Failed to process PDF"),
     }
 )
-
