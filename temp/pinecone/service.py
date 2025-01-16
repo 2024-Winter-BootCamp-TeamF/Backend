@@ -1,8 +1,7 @@
 import os
-import json
 from pinecone import Pinecone, ServerlessSpec
-from temp.openaiService import get_embedding
-
+from temp.openaiService import generate_summary
+from .models import PineconeSummary
 
 # Pinecone 초기화
 def get_pinecone_instance():
@@ -10,7 +9,6 @@ def get_pinecone_instance():
     Pinecone 인스턴스를 생성
     """
     return Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-    # return Pinecone(api_key=api_key)
 
 
 def get_pinecone_index(instance, index_name):
@@ -34,46 +32,35 @@ def get_pinecone_index(instance, index_name):
     # 기존 인덱스를 가져옴
     return instance.Index(index_name)
 
-def store_in_pinecone(instance, index_name, redis_client):
+
+def query_pinecone_data(instance, index_name, redis_key):
     """
-    Redis에서 데이터를 가져와 Pinecone에 저장
+    Pinecone에서 특정 Redis 키와 연관된 데이터 조회
     """
-    try:
-        keys = redis_client.keys("pdf:*:page:*")
-        if not keys:
-            return {"error": "No data found in Redis."}
+    index = get_pinecone_index(instance, index_name)
+    result = index.fetch(ids=[redis_key])
+    if not result or redis_key not in result["vectors"]:
+        return None
+    return result["vectors"][redis_key]
 
-        for key in keys:
-            page_data = redis_client.get(key)
-            if not page_data:
-                continue
+def query_pinecone_original_text(instance, index_name, redis_key):
+    """
+    Pinecone에서 특정 Redis 키와 연관된 메타데이터 중 original_text를 조회
+    """
+    index = get_pinecone_index(instance, index_name)
+    result = index.fetch(ids=[redis_key])
+    if not result or redis_key not in result["vectors"]:
+        return None
+    metadata = result["vectors"][redis_key].get("metadata", {})
+    return metadata.get("original_text")
 
-            # Redis 데이터 디코딩 및 JSON 로드
-            page_content = json.loads(page_data.decode('utf-8'))
-
-            # 'text' 필드 확인
-            text = page_content.get("text", "")
-            if not isinstance(text, str):
-                raise ValueError(f"Invalid 'text' format in Redis data for key {key.decode('utf-8')}")
-
-            # OpenAI 임베딩 생성
-            vector = get_embedding(text)
-
-            # Pinecone에 업로드
-            metadata = {
-                "redis_key": key.decode('utf-8'),
-                "file_id": page_content.get("file_id", "unknown"),
-                "page_number": page_content.get("page_number", "unknown"),
-            }
-            instance.index(index_name).upsert([
-                {
-                    "id": metadata["redis_key"],
-                    "values": vector,
-                    "metadata": metadata
-                }
-            ])
-
-        return {"message": "All data uploaded to Pinecone successfully"}
-
-    except Exception as e:
-        return {"error": f"Failed to upload to Pinecone: {str(e)}"}
+def process_and_save_summary(redis_key, original_text):
+    """
+    텍스트 요약을 생성하고 MySQL에 저장
+    """
+    summary_result = generate_summary(original_text)
+    if summary_result["success"]:
+        PineconeSummary.objects.create(redis_key=redis_key, summary_text=summary_result["response"])
+        return summary_result["response"]
+    else:
+        raise ValueError(f"Failed to generate summary: {summary_result['error']}")
