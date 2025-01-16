@@ -1,6 +1,7 @@
-### service.py
 import os
 from pinecone import Pinecone, ServerlessSpec
+from temp.openaiService import generate_summary
+from .models import PineconeSummary
 
 # Pinecone 초기화
 def get_pinecone_instance():
@@ -52,3 +53,14 @@ def query_pinecone_original_text(instance, index_name, redis_key):
         return None
     metadata = result["vectors"][redis_key].get("metadata", {})
     return metadata.get("original_text")
+
+def process_and_save_summary(redis_key, original_text):
+    """
+    텍스트 요약을 생성하고 MySQL에 저장
+    """
+    summary_result = generate_summary(original_text)
+    if summary_result["success"]:
+        PineconeSummary.objects.create(redis_key=redis_key, summary_text=summary_result["response"])
+        return summary_result["response"]
+    else:
+        raise ValueError(f"Failed to generate summary: {summary_result['error']}")

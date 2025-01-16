@@ -1,4 +1,3 @@
-# views.py
 import os
 import redis
 import json
@@ -7,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .service import get_pinecone_index, get_pinecone_instance, query_pinecone_data, query_pinecone_original_text
+from .service import get_pinecone_index, get_pinecone_instance, query_pinecone_data, query_pinecone_original_text, process_and_save_summary
 from temp.openaiService import get_embedding
 
 # Redis 클라이언트 설정
@@ -131,4 +130,46 @@ class QueryFromPineconeView(APIView):
         except Exception as e:
             return Response({"error": f"Failed to query Pinecone: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class GenerateAndSaveSummaryView(APIView):
+    """
+    Pinecone에서 텍스트를 조회, 요약하고 MySQL에 저장하는 API
+    """
+
+    query_param = openapi.Parameter(
+        "redis_key", openapi.IN_QUERY, description="Redis에서 저장된 키", type=openapi.TYPE_STRING
+    )
+
+    @swagger_auto_schema(
+        operation_description="Generate summary from Pinecone and save to MySQL",
+        manual_parameters=[query_param],
+        responses={
+            200: openapi.Response(description="Summary created and saved successfully."),
+            404: openapi.Response(description="Original text not found."),
+            500: openapi.Response(description="Internal server error."),
+        }
+    )
+    def get(self, request):
+        redis_key = request.query_params.get("redis_key")
+        if not redis_key:
+            return Response({"error": "Missing 'redis_key' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Pinecone 인스턴스 생성 및 텍스트 가져오기
+            instance = get_pinecone_instance()
+            index_name = os.getenv("PINECONE_INDEX_NAME", "pdf-index")
+            original_text = query_pinecone_original_text(instance, index_name, redis_key)
+
+            if not original_text:
+                return Response({"error": "Original text not found for the given Redis key."}, status=status.HTTP_404_NOT_FOUND)
+
+            # 요약 생성 및 저장
+            summary = process_and_save_summary(redis_key, original_text)
+
+            return Response({
+                "message": "Summary created and saved successfully.",
+                "summary": summary,
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": f"Failed to process request: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -37,7 +37,8 @@ def get_embedding(text, model="text-embedding-ada-002"):
 
     except Exception as e:
         raise ValueError(f"Failed to generate embedding: {str(e)}")
-def ask_openai(prompt: str, model: str = "gpt-4", max_tokens: int = 150, temperature: float = 0.7) -> dict:
+
+def ask_openai(prompt: str, model: str = "gpt-3.5-turbo", max_tokens: int = 150, temperature: float = 0.7) -> dict:
     """
     OpenAI API와 통신하여 답변을 반환합니다.
     """
@@ -66,7 +67,17 @@ def generate_summary(text: str) -> dict:
     """
     텍스트 요약을 생성합니다.
     """
-    prompt = f"파일의 상태나 그림의 위치같은거 말고 1페이지 부터 순서대로 한국말로 강의자료의 내용을 초보자도 알기 쉽게 정리해줘 페이지 수도 언급하지마:\n\n{text}"
+    if not text.strip():
+        return {"success": False, "error": "Input text is empty or null."}
+
+    prompt = (
+        "다음 텍스트는 대학 강의 자료입니다. "
+        "당신은 세계에서 가장 뛰어난 대학 강의 학습 보조 도구입니다. "
+        "주요 개념과 핵심 내용을 간단히 요약해 주세요.\n"
+        "불필요한 세부사항, 예시, 또는 장황한 설명은 생략해 주세요.\n\n"
+        f"텍스트: {text}"
+    )
+
     return ask_openai(prompt, max_tokens=500)
 
 
