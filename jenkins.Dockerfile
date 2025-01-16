@@ -1,8 +1,10 @@
 # 젠킨스 이미지
 FROM jenkins/jenkins:latest
 
-# 유저 루트 (권한 이슈)
+# Python3 설치
 USER root
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv && \
+    rm -rf /var/lib/apt/lists/*
 
 # 도커 관련 라이브러리 설치
 RUN apt-get update && \

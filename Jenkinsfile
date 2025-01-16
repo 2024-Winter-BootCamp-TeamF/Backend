@@ -18,30 +18,37 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
-                script {
-                    // Python 환경을 준비합니다.
-                    sh 'python3 --version'
-                    sh 'python3 -m venv venv'
-                    sh '. venv/bin/activate && pip install --upgrade pip'
-                }
+                sh '''
+                # Poetry 설치 확인 및 설치
+                if ! command -v poetry &> /dev/null; then
+                    echo "Poetry가 설치되어 있지 않습니다. 설치를 진행합니다."
+                    curl -sSL https://install.python-poetry.org | python3 -
+                    export PATH="$HOME/.local/bin:$PATH"
+                else
+                    echo "Poetry가 이미 설치되어 있습니다."
+                fi
+
+                # Poetry 버전 확인
+                poetry --version
+                '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    // requirements.txt에 명시된 의존성을 설치합니다.
-                    sh '. venv/bin/activate && pip install -r requirements.txt'
-                }
+                sh '''
+                # 가상 환경 생성 및 의존성 설치
+                poetry install --no-interaction --no-ansi
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                script {
-                    // 테스트를 실행합니다. (예: pytest)
-                    sh '. venv/bin/activate && pytest'
-                }
+                sh '''
+                # Poetry 가상 환경에서 테스트 실행
+                poetry run pytest
+                '''
             }
         }
 
