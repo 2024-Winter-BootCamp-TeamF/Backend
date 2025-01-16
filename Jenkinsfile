@@ -5,12 +5,12 @@ pipeline {
         REPOSITORY = "jeonjong/teamf-backend" // Docker Hub ID와 레포지토리 이름
         DOCKERHUB_CREDENTIALS = credentials('team-f-docker-hub') // Jenkins에 등록된 Docker Hub id
         IMAGE_TAG = "" // Docker 이미지 태그
-        PATH = "$HOME/.local/bin:$PATH" // Poetry 설치 경로 추가
     }
 
     stages {
         stage('Checkout Code') {
             steps {
+                // 작업 디렉토리를 정리하고 GitHub에서 코드를 가져옵니다.
                 cleanWs()
                 git branch: 'main', url: 'https://github.com/2024-Winter-BootCamp-TeamF/Backend.git'
             }
@@ -18,45 +18,39 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
-        sh '''
-        # Python 3.12 설치
-        apt update && apt install -y software-properties-common
-        add-apt-repository -y ppa:deadsnakes/ppa
-        apt install -y python3.12 python3.12-venv python3.12-distutils
-        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
-
-        # Poetry 설치 확인 및 설치
-        if ! command -v poetry &> /dev/null; then
-            curl -sSL https://install.python-poetry.org | python3 -
-            export PATH="$HOME/.local/bin:$PATH"
-        fi
-
-        # Poetry가 Python 3.12를 사용하도록 설정
-        poetry env use python3.12
-        poetry --version
-        '''
+                script {
+                    // Python 환경을 준비하고 Poetry를 설치합니다.
+                    sh 'python3 --version'
+                    sh 'python3 -m venv venv'
+                    sh '. venv/bin/activate && pip install --upgrade pip'
+                    sh '. venv/bin/activate && curl -sSL https://install.python-poetry.org | python3 -'
+                    sh '. venv/bin/activate && poetry --version'
+                }
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                poetry install --no-interaction --no-ansi
-                '''
+                script {
+                    // Poetry를 사용하여 의존성을 설치합니다.
+                    sh '. venv/bin/activate && poetry install'
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '''
-                poetry run pytest
-                '''
+                script {
+                    // Poetry를 사용하여 테스트를 실행합니다.
+                    sh '. venv/bin/activate && poetry run pytest'
+                }
             }
         }
 
         stage('Set Image Tag') {
             steps {
                 script {
+                    // 브랜치 이름에 따라 Docker 이미지 태그를 설정합니다.
                     IMAGE_TAG = "v1.0.${BUILD_NUMBER}"
                     echo "Docker image tag set to: ${IMAGE_TAG}"
                 }
@@ -65,25 +59,29 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${REPOSITORY}:${IMAGE_TAG} ."
+                script {
+                    // Docker 이미지를 빌드합니다.
+                    sh "docker build -t ${REPOSITORY}:${IMAGE_TAG} ."
+                }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                sh '''
-                echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
-                docker push ${REPOSITORY}:${IMAGE_TAG}
-                '''
+                script {
+                    // Docker Hub에 로그인하고 이미지를 푸시합니다.
+                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                    sh "docker push ${REPOSITORY}:${IMAGE_TAG}"
+                }
             }
         }
 
         stage('Clean Up') {
             steps {
-                sh '''
-                docker rmi ${REPOSITORY}:${IMAGE_TAG} || true
-                docker image prune -f
-                '''
+                script {
+                    // 로컬에서 빌드한 Docker 이미지를 삭제하여 공간을 확보합니다.
+                    sh "docker rmi ${REPOSITORY}:${IMAGE_TAG}"
+                }
             }
         }
     }
@@ -96,6 +94,7 @@ pipeline {
             echo "Pipeline failed. Check the logs for details."
         }
         always {
+            // Jenkins 작업 디렉토리를 정리합니다.
             cleanWs()
         }
     }
