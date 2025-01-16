@@ -1,10 +1,16 @@
 # 젠킨스 이미지
 FROM jenkins/jenkins:latest
+FROM python:3.12-slim
 
 # Python3 설치
 USER root
-RUN apt-get update && apt-get install -y python3 python3-pip python3-venv && \
-    rm -rf /var/lib/apt/lists/*
+
+# Poetry 설치
+RUN apt update && apt install -y curl && \
+    curl -sSL https://install.python-poetry.org | python3 - && \
+    export PATH="/root/.local/bin:$PATH" && \
+    poetry --version
+
 
 # 도커 관련 라이브러리 설치
 RUN apt-get update && \
