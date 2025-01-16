@@ -5,6 +5,7 @@ pipeline {
         REPOSITORY = "jeonjong/teamf-backend" // Docker Hub ID와 레포지토리 이름
         DOCKERHUB_CREDENTIALS = credentials('team-f-docker-hub') // Jenkins에 등록된 Docker Hub id
         IMAGE_TAG = "" // Docker 이미지 태그
+        PATH = "$HOME/.local/bin:$PATH" // Poetry 설치 경로 추가
     }
 
     stages {
@@ -18,12 +19,15 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 sh '''
-                if ! command -v poetry &> /dev/null; then
-                    echo "Poetry가 설치되어 있지 않습니다. 설치를 진행합니다."
-                    curl -sSL https://install.python-poetry.org | python3 -
-                    export PATH="$HOME/.local/bin:$PATH"
-                fi
-                poetry --version
+                   if ! command -v poetry &> /dev/null; then
+                        echo "Poetry가 설치되어 있지 않습니다. 설치를 진행합니다."
+                        curl -sSL https://install.python-poetry.org | python3 -
+                        export PATH="$HOME/.local/bin:$PATH"
+                    fi
+
+                    # Poetry가 제대로 설치되었는지 확인
+                    echo "Poetry 경로: $(command -v poetry)"
+                    poetry --version
                 '''
             }
         }
