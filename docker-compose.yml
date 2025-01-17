@@ -66,6 +66,17 @@ services:
         networks:
             - app-tier  # Django와 같은 네트워크에서 메트릭 수집 가능
 
+    grafana:
+        image: grafana/grafana:9.5.20
+        container_name: grafana
+        volumes:
+            - ./grafana:/etc/grafana/provisioning # 그라파나 설정(config) 볼륨
+            - ./grafana/data:/var/lib/grafana # 그라파나 대시보드 데이터
+        ports:
+            - "3000:3000"
+        networks:
+            - app-tier
+
 volumes:
     mysqldata:  # 로컬 디렉토리를 지정했으므로, 익명 볼륨 제거 가능
 
