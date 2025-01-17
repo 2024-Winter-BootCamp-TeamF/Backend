@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import PDFUploadView, PDFPageTextView, PDFDeleteByFileIDView, PDFGenerateView
-
 urlpatterns = [
     path('upload/', PDFUploadView.as_view(), name='file-upload'),
     path('<int:file_id>/page/<int:page_number>/', PDFPageTextView.as_view(), name='page-text'),
