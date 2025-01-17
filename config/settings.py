@@ -21,6 +21,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Static 또는 Media 경로에 있는 폰트 경로 설정
+FONT_DIR = os.path.join(BASE_DIR, 'media/fonts')
+FONT_PATH = os.path.join(FONT_DIR, 'NanumGothic.ttf')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/

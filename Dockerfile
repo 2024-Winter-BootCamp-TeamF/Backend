@@ -50,3 +50,6 @@ ENV DJANGO_SETTINGS_MODULE=config.settings
 
 # 포트 노출
 EXPOSE 8000
+
+# 폰트 복사
+COPY media/fonts /app/media/fonts

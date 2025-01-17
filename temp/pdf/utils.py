@@ -1,5 +1,6 @@
 import fitz
 import json
+from django.conf import settings
 
 from pymupdf4llm.helpers.pymupdf_rag import to_markdown
 
@@ -8,6 +9,15 @@ from config.settings import redis_client
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# 한국어 폰트 등록 (나눔고딕 예시)
+FONT_NAME = "NanumGothic"
+FONT_PATH = settings.FONT_PATH  # settings.py에서 정의한 경로 사용
+pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_PATH))
+
+
 
 def convert_rect_objects(data):
     """데이터 구조에서 Rect 객체를 재귀적으로 변환"""
@@ -56,10 +66,11 @@ def extract_and_store_pdf_to_redis(pdf_path, file_id):
 
 def pdf_to_text(text_data):
     """
-    주어진 텍스트 데이터를 PDF로 변환
+    주어진 텍스트 데이터를 한국어 폰트를 사용하여 PDF로 변환
     """
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
+    pdf.setFont(FONT_NAME, 12)  # 등록한 폰트와 크기 설정
 
     # 텍스트 위치 및 줄 바꿈 처리
     y_position = 750
@@ -67,6 +78,7 @@ def pdf_to_text(text_data):
     for line in text_data.split('\n'):
         if y_position < 50:  # 페이지 끝이면 새 페이지 추가
             pdf.showPage()
+            pdf.setFont(FONT_NAME, 12)  # 새 페이지에도 폰트 설정 필요
             y_position = 750
         pdf.drawString(50, y_position, line)
         y_position -= line_height
