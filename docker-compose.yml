@@ -54,9 +54,20 @@ services:
          - "6379:6379"
         networks:
         - app-tier
+
+    prometheus:
+        image: prom/prometheus:latest
+        container_name: prometheus
+        restart: always
+        ports:
+            - '9090:9090'  # Prometheus 웹 인터페이스 포트
+        volumes:
+            - ./prometheus.yml:/etc/prometheus/prometheus.yml  # Prometheus 설정 파일 연결
+        networks:
+            - app-tier  # Django와 같은 네트워크에서 메트릭 수집 가능
+
 volumes:
     mysqldata:  # 로컬 디렉토리를 지정했으므로, 익명 볼륨 제거 가능
-
 
 networks:
     app-tier:

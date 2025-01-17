@@ -53,3 +53,6 @@ EXPOSE 8000
 
 # 폰트 복사
 COPY media/fonts /app/media/fonts
+
+# 실행 명령어
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "config.wsgi:application", "--workers=3"]

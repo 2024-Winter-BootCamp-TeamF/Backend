@@ -34,4 +34,7 @@ urlpatterns = [
 
     path("api/pinecone/", include("temp.pinecone.urls")),
 
+    # 프로메테우스 메트릭
+    path('', include('django_prometheus.urls')),
+
 ]
