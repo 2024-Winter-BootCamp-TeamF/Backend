@@ -1,11 +1,13 @@
 import fitz
-import pymupdf4llm
 import json
 
 from pymupdf4llm.helpers.pymupdf_rag import to_markdown
 
 from config.settings import redis_client
 
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from io import BytesIO
 
 def convert_rect_objects(data):
     """데이터 구조에서 Rect 객체를 재귀적으로 변환"""
@@ -51,3 +53,24 @@ def extract_and_store_pdf_to_redis(pdf_path, file_id):
     except Exception as e:
         print("Error in extract_and_store_pdf_to_redis:", str(e))  # 에러 출력
         raise e
+
+def pdf_to_text(text_data):
+    """
+    주어진 텍스트 데이터를 PDF로 변환
+    """
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+
+    # 텍스트 위치 및 줄 바꿈 처리
+    y_position = 750
+    line_height = 15
+    for line in text_data.split('\n'):
+        if y_position < 50:  # 페이지 끝이면 새 페이지 추가
+            pdf.showPage()
+            y_position = 750
+        pdf.drawString(50, y_position, line)
+        y_position -= line_height
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
