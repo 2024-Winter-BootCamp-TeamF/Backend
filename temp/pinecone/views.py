@@ -24,6 +24,7 @@ class UploadAllToPineconeView(APIView):
             500: openapi.Response(description="Internal server error"),
         }
     )
+
     def post(self, request):
         try:
             # Redis 데이터 처리 및 Pinecone 업로드
@@ -65,7 +66,8 @@ class UploadAllToPineconeView(APIView):
                             {  # 메타데이터
                                 "page_number": page_content.get("page_number"),
                                 "file_name": file_name,  # 파일 제목 저장
-                                "original_text": text  # 원본 텍스트 저장
+                                "original_text": text,  # 원본 텍스트 저장
+                                "category": self.determine_category(file_name),  # 파일 이름 기반 카테고리
                             }
                         )
                     ])
@@ -82,6 +84,20 @@ class UploadAllToPineconeView(APIView):
         except Exception as e:
             return Response({"error": f"Failed to upload to Pinecone: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+    def determine_category(self, file_name):
+        """
+        파일 이름을 기반으로 카테고리를 결정합니다.
+        """
+        lecture_keywords = ["족보", "수시", "중간", "기말", "고사", "quiz", "퀴즈"]
+        file_name_lower = file_name.lower()  # 파일 이름 소문자로 변환
+
+        # 파일 이름에 강의 자료 키워드가 포함되어 있는지 확인
+        if any(keyword in file_name_lower for keyword in lecture_keywords):
+            return "genealogy" # 족보
+
+        # 기본 카테고리
+        return "lecture_notes" # 강의 자료
 
 class QueryFromPineconeView(APIView):
     """
