@@ -175,3 +175,10 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.TokenAuthentication",
     )
 }
+
+# Celery 설정
+CELERY_BROKER_URL = 'amqp://rabbitmq:rabbitmq@rabbitmq:5672//'  # RabbitMQ 브로커
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'  # Redis 백엔드
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'

@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     default-libmysqlclient-dev \
     dos2unix \
+    iputils-ping \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -53,3 +55,6 @@ EXPOSE 8000
 
 # 폰트 복사
 COPY media/fonts /app/media/fonts
+
+# 기본 명령어 설정: Celery Worker 실행
+CMD ["celery", "-A", "config", "worker", "--loglevel=info"]

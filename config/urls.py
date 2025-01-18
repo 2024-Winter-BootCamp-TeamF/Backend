@@ -34,4 +34,6 @@ urlpatterns = [
 
     path("api/pinecone/", include("temp.pinecone.urls")),
 
+    path('api/langchain/', include('temp.langchain.urls')),  # LangChain 앱의 URL 추가
+
 ]

@@ -13,13 +13,18 @@ services:
         restart: always
         depends_on:
             - mysqldb
+            - rabbitmq
+            - redis
         env_file:
             - .env
         volumes:
-            - './:/backend'  # 수정: 로컬 프로젝트 루트 디렉토리를 컨테이너의 /backend와 연결
-            - './media/fonts:/app/media/fonts' # 폰트 디렉토리 컨테이너 연결
+            - './:/backend'  # 로컬 프로젝트 루트를 컨테이너 /backend에 연결
+            - './media/fonts:/app/media/fonts' # 폰트 디렉토리 연결
         networks:
             - app-tier
+        dns:
+            - 8.8.8.8  # Google Public DNS
+            - 8.8.4.4  # Google Public DNS
 
     mysqldb:
         image: mysql:latest
@@ -28,7 +33,7 @@ services:
         ports:
             - '3305:3306'
         volumes:
-            - 'mysqldata:/var/lib/mysql' # 수정: mysqldata를 로컬 디렉토리 './data/mysql'에 매핑
+            - 'mysqldata:/var/lib/mysql'  # 로컬 볼륨 연결
         restart: always
         networks:
             - app-tier
@@ -39,7 +44,7 @@ services:
         links:
           - mysqldb
         ports:
-          - 80:80
+          - 8080:80
         environment:
           PMA_ARBITRARY: 1
           PMA_HOST: mysqldb
@@ -47,16 +52,51 @@ services:
         networks:
           - app-tier
 
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbitmq
+        ports:
+            - "5672:5672"  # RabbitMQ 브로커 포트
+            - "15672:15672"  # RabbitMQ 관리 UI 포트
+        env_file:
+            - .env
+        networks:
+            - app-tier
+        dns:
+            - 8.8.8.8
+            - 8.8.4.4
+
     redis:
         image: redis:alpine
         container_name: redis
         ports:
-         - "6379:6379"
+            - "6379:6379"
         networks:
-        - app-tier
-volumes:
-    mysqldata:  # 로컬 디렉토리를 지정했으므로, 익명 볼륨 제거 가능
+            - app-tier
+        dns:
+            - 8.8.8.8
+            - 8.8.4.4
 
+    celery:
+        build:
+            context: .
+        container_name: celery
+        command: celery -A config worker --loglevel=info
+        depends_on:
+            - rabbitmq
+            - redis
+        volumes:
+            - .:/backend  # Django와 같은 볼륨 연결
+        env_file:
+            - .env
+        networks:
+            - app-tier
+        dns:
+            - 8.8.8.8
+            - 8.8.4.4
+
+volumes:
+    mysqldata:
 
 networks:
     app-tier:
