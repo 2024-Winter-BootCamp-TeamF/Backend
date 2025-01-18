@@ -33,34 +33,42 @@ def get_pinecone_index(instance, index_name):
     return instance.Index(index_name)
 
 
-def query_pinecone_data(instance, index_name, redis_key):
+def query_pinecone_data(instance, index_name, redis_key, user_id):
     """
-    Pinecone에서 특정 Redis 키와 연관된 데이터 조회
+    Pinecone에서 특정 Redis 키와 연관된 데이터를 조회 (user_id 기반)
     """
     index = get_pinecone_index(instance, index_name)
-    result = index.fetch(ids=[redis_key])
-    if not result or redis_key not in result["vectors"]:
+    record_id = f"{user_id}:{redis_key}"  # user_id를 포함한 Redis 키를 사용
+    result = index.fetch(ids=[record_id])
+    if not result or record_id not in result["vectors"]:
         return None
-    return result["vectors"][redis_key]
+    return result["vectors"][record_id]
 
-def query_pinecone_original_text(instance, index_name, redis_key):
+
+def query_pinecone_original_text(instance, index_name, redis_key, user_id):
     """
-    Pinecone에서 특정 Redis 키와 연관된 메타데이터 중 original_text를 조회
+    Pinecone에서 특정 Redis 키와 연관된 메타데이터 중 original_text를 조회 (user_id 기반)
     """
     index = get_pinecone_index(instance, index_name)
-    result = index.fetch(ids=[redis_key])
-    if not result or redis_key not in result["vectors"]:
+    record_id = f"{user_id}:{redis_key}"  # user_id를 포함한 Redis 키를 사용
+    result = index.fetch(ids=[record_id])
+    if not result or record_id not in result["vectors"]:
         return None
-    metadata = result["vectors"][redis_key].get("metadata", {})
+    metadata = result["vectors"][record_id].get("metadata", {})
     return metadata.get("original_text")
 
-def process_and_save_summary(redis_key, original_text):
+
+def process_and_save_summary(redis_key, original_text, user_id):
     """
     텍스트 요약을 생성하고 MySQL에 저장
     """
     summary_result = generate_summary(original_text)
     if summary_result["success"]:
-        PineconeSummary.objects.create(redis_key=redis_key, summary_text=summary_result["response"])
+        PineconeSummary.objects.create(
+            redis_key=redis_key,
+            user_id=user_id,  # 사용자 ID를 저장
+            summary_text=summary_result["response"]
+        )
         return summary_result["response"]
     else:
         raise ValueError(f"Failed to generate summary: {summary_result['error']}")

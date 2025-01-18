@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     default-libmysqlclient-dev \
     dos2unix \
+    iputils-ping \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
