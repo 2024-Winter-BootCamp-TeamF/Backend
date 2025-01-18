@@ -68,9 +68,11 @@ INSTALLED_APPS = [
     'user',
     'rest_framework.authtoken',
     'django_prometheus',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -83,6 +85,14 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # 프론트엔드 로컬 도메인
+    "http://127.0.0.1:3000",  # 프론트엔드 로컬 도메인
+]
+
+# credentials 허용
+CORS_ALLOW_CREDENTIALS = True
 
 TEMPLATES = [
     {
