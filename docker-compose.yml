@@ -21,12 +21,6 @@ services:
         networks:
             - app-tier
 
-    fronted:
-        networks:
-            - app-tier
-        ports:
-            - "3000:3000"
-
     mysqldb:
         image: mysql:latest
         env_file:
