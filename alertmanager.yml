@@ -1,0 +1,15 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'slack-notifications'
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 5m
+
+receivers:
+  - name: 'slack-notifications' #알림 이름
+    slack_configs:
+    - api_url: 'https://hooks.slack.com/services/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' #webhook url 추가
+      channel: '#monitoring' #사용하는 채널
+      send_resolved: true
