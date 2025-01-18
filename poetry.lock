@@ -522,6 +522,37 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-cors-headers"
+version = "4.6.0"
+description = "django-cors-headers is a Django application for handling the server headers required for Cross-Origin Resource Sharing (CORS)."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "django_cors_headers-4.6.0-py3-none-any.whl", hash = "sha256:8edbc0497e611c24d5150e0055d3b178c6534b8ed826fb6f53b21c63f5d48ba3"},
+    {file = "django_cors_headers-4.6.0.tar.gz", hash = "sha256:14d76b4b4c8d39375baeddd89e4f08899051eeaf177cb02a29bd6eae8cf63aa8"},
+]
+
+[package.dependencies]
+asgiref = ">=3.6"
+django = ">=4.2"
+
+[[package]]
+name = "django-prometheus"
+version = "2.3.1"
+description = "Django middlewares to monitor your application with Prometheus.io."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-prometheus-2.3.1.tar.gz", hash = "sha256:f9c8b6c780c9419ea01043c63a437d79db2c33353451347894408184ad9c3e1e"},
+    {file = "django_prometheus-2.3.1-py2.py3-none-any.whl", hash = "sha256:cf9b26f7ba2e4568f08f8f91480a2882023f5908579681bcf06a4d2465f12168"},
+]
+
+[package.dependencies]
+prometheus-client = ">=0.7"
+
+[[package]]
 name = "djangorestframework"
 version = "3.15.2"
 description = "Web APIs for Django, made easy."
@@ -1529,6 +1560,22 @@ files = [
 wcwidth = "*"
 
 [[package]]
+name = "prometheus-client"
+version = "0.21.1"
+description = "Python client for the Prometheus monitoring system."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "prometheus_client-0.21.1-py3-none-any.whl", hash = "sha256:594b45c410d6f4f8888940fe80b5cc2521b305a1fafe1c58609ef715a001f301"},
+    {file = "prometheus_client-0.21.1.tar.gz", hash = "sha256:252505a722ac04b0456be05c05f75f45d760c2911ffc45f2a06bcaed9f3ae3fb"},
+]
+
+[package.extras]
+twisted = ["twisted"]
+
+
+[[package]]
 name = "propcache"
 version = "0.2.1"
 description = "Accelerated property cache"
@@ -1855,20 +1902,19 @@ yaml = ["pyyaml (>=6.0.1)"]
 
 [[package]]
 name = "pymupdf"
-version = "1.25.1"
+version = "1.25.2"
 description = "A high performance Python library for data extraction, analysis, conversion & manipulation of PDF (and other) documents."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pymupdf-1.25.1-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:793f9f6d51029e97851c711b3f6d9fe912313d95a306fbe8b1866f301d0e2bd3"},
-    {file = "pymupdf-1.25.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:15e6f4013ad0a029a2221920f9d2081f56dc43259dabfdf5cad7fbf1cee4b5a7"},
-    {file = "pymupdf-1.25.1-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:a39afbd80381f43e30d6eb2ec4613f465f507ac2b76070abdd2da8724f32ef36"},
-    {file = "pymupdf-1.25.1-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b63f8e9e65b0bda48f9217efd4d2a8c6d7a739dd28baf460c1ae78439b9af489"},
-    {file = "pymupdf-1.25.1-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a687bd387589e30abd810a78a23341f57f43fa16a4d8d8c0b870bb6d89607343"},
-    {file = "pymupdf-1.25.1-cp39-abi3-win32.whl", hash = "sha256:fc7dbc1aa9e298a4c81084e389c9623c26fcaa232c71efaa073af150069e2221"},
-    {file = "pymupdf-1.25.1-cp39-abi3-win_amd64.whl", hash = "sha256:e2b0b73c0aab0f863e5132c93cfa4607e8129feb1afa3d544b2cf7f172c50b5a"},
-    {file = "pymupdf-1.25.1.tar.gz", hash = "sha256:6725bec0f37c2380d926f792c262693c926af7cc1aa5aa2b8207e771867f015a"},
+    {file = "pymupdf-1.25.2-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:59dea22b633cc4fc13670b4c5db50d71f8cd4f420814420f33ce47ddcb61e1f6"},
+    {file = "pymupdf-1.25.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:e8b8a874497cd0deee89a6a4fb76a3a08173c8d39e88fc7cf715764ec5a243e9"},
+    {file = "pymupdf-1.25.2-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ae8cfa7a97d78f813d286ecba32369059d88073edd1e5cf105f4cd0811f71925"},
+    {file = "pymupdf-1.25.2-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:295505fe1ecb7c7b57d4124d373e207ea311d8e40bc7ac3016d8ec2d60b091e9"},
+    {file = "pymupdf-1.25.2-cp39-abi3-win32.whl", hash = "sha256:b9488c8b82bb9be36fb13ee0c8d43b0ddcc50af83b61da01e6040413d9e67da6"},
+    {file = "pymupdf-1.25.2-cp39-abi3-win_amd64.whl", hash = "sha256:1b4ca6f5780d319a08dff885a5a0e3585c5d7af04dcfa063c535b88371fd91c1"},
+    {file = "pymupdf-1.25.2.tar.gz", hash = "sha256:9ea88ff1b3ccb359620f106a6fd5ba6877d959d21d78272052c3496ceede6eec"},
 ]
 
 [[package]]
@@ -2445,4 +2491,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "15f0dbbda3e11bdea85e66f3070f17965af353129e5af03f376642c1ce5aadf1"
+

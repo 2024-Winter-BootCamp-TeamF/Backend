@@ -34,7 +34,11 @@ SECRET_KEY = "django-insecure-5l21ga@l5#j1r_$5i%-b@5j%@p0c==1o8rt9v)xo07qiv(4w#=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'django',  # Docker Compose에서 사용되는 컨테이너 이름
+]
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
@@ -63,9 +67,13 @@ INSTALLED_APPS = [
     'drf_yasg',
     'user',
     'rest_framework.authtoken',
+    'django_prometheus',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -73,9 +81,18 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = "config.urls"
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # 프론트엔드 로컬 도메인
+    "http://127.0.0.1:3000",  # 프론트엔드 로컬 도메인
+]
+
+# credentials 허용
+CORS_ALLOW_CREDENTIALS = True
 
 TEMPLATES = [
     {
@@ -107,6 +124,9 @@ DATABASES = {
         "PASSWORD": os.getenv("MYSQL_PASSWORD"),  # .dotenv에서 MYSQL_PASSWORD 값 가져오기
         "HOST": "mysqldb",  # MySQL 서버 주소 (로컬 환경에서는 'localhost')
         "PORT": "3306",  # MySQL 기본 포트
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
 # django - local, Mysql - docker : host가 localhost

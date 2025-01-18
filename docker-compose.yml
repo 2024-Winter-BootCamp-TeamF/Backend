@@ -1,103 +1,150 @@
-version: '3.8'
+version: "3.8"
+
 services:
-    django:
-        build:
-            context: ./
-        container_name: django
-        command: >
-          sh -c "python manage.py makemigrations &&
-                python manage.py migrate &&
-                python manage.py runserver 0.0.0.0:8000"
-        ports:
-            - "8000:8000"
-        restart: always
-        depends_on:
-            - mysqldb
-            - rabbitmq
-            - redis
-        env_file:
-            - .env
-        volumes:
-            - './:/backend'  # 로컬 프로젝트 루트를 컨테이너 /backend에 연결
-            - './media/fonts:/app/media/fonts' # 폰트 디렉토리 연결
-        networks:
-            - app-tier
-        dns:
-            - 8.8.8.8  # Google Public DNS
-            - 8.8.4.4  # Google Public DNS
+  django:
+    build:
+      context: ./
+    container_name: django
+    command: >
+      sh -c "python manage.py makemigrations &&
+            python manage.py migrate &&
+            python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    restart: always
+    depends_on:
+      - mysqldb
+      - redis
+      - rabbitmq
+    env_file:
+      - .env
+    volumes:
+      - "./:/backend"  # 로컬 프로젝트 루트를 컨테이너 /backend에 연결
+      - "./media/fonts:/app/media/fonts"  # 폰트 디렉토리 연결
+    networks:
+      - app-tier
 
-    mysqldb:
-        image: mysql:latest
-        env_file:
-            - .env
-        ports:
-            - '3305:3306'
-        volumes:
-            - 'mysqldata:/var/lib/mysql'  # 로컬 볼륨 연결
-        restart: always
-        networks:
-            - app-tier
+  mysqldb:
+    image: mysql:latest
+    container_name: mysqldb
+    env_file:
+      - .env
+    ports:
+      - "3305:3306"
+    volumes:
+      - "mysqldata:/var/lib/mysql"  # MySQL 데이터 저장
+    restart: always
+    networks:
+      - app-tier
 
-    phpmyadmin:
-        image: phpmyadmin
-        restart: always
-        links:
-          - mysqldb
-        ports:
-          - 8080:80
-        environment:
-          PMA_ARBITRARY: 1
-          PMA_HOST: mysqldb
-          PMA_PORT: 3306
-        networks:
-          - app-tier
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      - mysqldb
+    ports:
+      - "8080:80"
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: mysqldb
+      PMA_PORT: 3306
+    networks:
+      - app-tier
 
-    rabbitmq:
-        image: rabbitmq:3-management
-        container_name: rabbitmq
-        ports:
-            - "5672:5672"  # RabbitMQ 브로커 포트
-            - "15672:15672"  # RabbitMQ 관리 UI 포트
-        env_file:
-            - .env
-        networks:
-            - app-tier
-        dns:
-            - 8.8.8.8
-            - 8.8.4.4
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-tier
 
-    redis:
-        image: redis:alpine
-        container_name: redis
-        ports:
-            - "6379:6379"
-        networks:
-            - app-tier
-        dns:
-            - 8.8.8.8
-            - 8.8.4.4
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # RabbitMQ 브로커 포트
+      - "15672:15672"  # RabbitMQ 관리 UI 포트
+    env_file:
+      - .env
+    networks:
+      - app-tier
 
-    celery:
-        build:
-            context: .
-        container_name: celery
-        command: celery -A config worker --loglevel=info
-        depends_on:
-            - rabbitmq
-            - redis
-        volumes:
-            - .:/backend  # Django와 같은 볼륨 연결
-        env_file:
-            - .env
-        networks:
-            - app-tier
-        dns:
-            - 8.8.8.8
-            - 8.8.4.4
+  celery:
+    build:
+      context: .
+    container_name: celery
+    command: celery -A config worker --loglevel=info
+    depends_on:
+      - django
+      - redis
+      - rabbitmq
+    volumes:
+      - "./:/backend"  # Django와 같은 볼륨 연결
+    env_file:
+      - .env
+    networks:
+      - app-tier
+
+  prometheus:
+    image: prom/prometheus:v2.45.6
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"  # Prometheus 웹 인터페이스 포트
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml  # Prometheus 설정 파일 연결
+      - ./alert-rules.yml:/etc/alert-rules.yml  # Alertmanager 규칙 연결
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - app-tier
+
+  grafana:
+    image: grafana/grafana:9.5.20
+    container_name: grafana
+    volumes:
+      - ./grafana:/etc/grafana/provisioning  # Grafana 설정
+      - ./grafana/data:/var/lib/grafana  # Grafana 데이터
+    ports:
+      - "4000:3000"  # Grafana 웹 인터페이스 포트
+    networks:
+      - app-tier
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro  # 읽기 전용 데이터 - 루트 파일 시스템
+      - /var/run:/var/run:rw  # 런타임 데이터
+      - /sys:/sys:ro  # 커널, 하드웨어, 드라이버 정보
+      - /var/lib/docker/:/var/lib/docker:ro  # Docker 정보
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    privileged: true  # 컨테이너에 높은 권한 부여
+    networks:
+      - app-tier
+
+  alertmanager:
+    image: prom/alertmanager:main
+    container_name: alertmanager
+    ports:
+      - "9093:9093"  # Alertmanager 포트
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager.yml  # Alertmanager 설정 파일
+      - ./alertmanager/tmp:/data/  # 데이터 볼륨
+    command: --config.file=/etc/alertmanager.yml --log.level=debug
+    networks:
+      - app-tier
 
 volumes:
-    mysqldata:
+  mysqldata:  # MySQL 데이터 저장
 
 networks:
-    app-tier:
-        driver: bridge
+  app-tier:
+    driver: bridge

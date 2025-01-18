@@ -34,6 +34,8 @@ urlpatterns = [
 
     path("api/pinecone/", include("temp.pinecone.urls")),
 
-    path('api/langchain/', include('temp.langchain.urls')),  # LangChain 앱의 URL 추가
+    path('api/langchain/', include('temp.langchain.urls')), 
+  
+    path('', include('django_prometheus.urls')),
 
 ]
