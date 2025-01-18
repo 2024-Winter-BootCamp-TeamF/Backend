@@ -1,43 +1,58 @@
+from .services import get_pinecone_instance
 import os
-
 from celery import shared_task
-from .services import (
-    get_pinecone_instance,
-    get_all_data_from_pinecone,
-    split_text_by_linebreaks,
-    summarize_text_with_gpt,
-    save_summary_to_mysql_and_pinecone,
-)
+from temp.langchain.services import get_user_data_by_topic
+from temp.openaiService import generate_summary
+from user.models import UserSummary  # Django 모델 import
 
 
 @shared_task
-def process_summary_task(user_id):
+def process_summary_task(user_id, topic):
     """
-    Pinecone 데이터를 기반으로 요약 작업을 수행하는 Celery 태스크
+    유저 ID와 주제를 기반으로 Pinecone에서 데이터를 검색하고 요약을 생성하는 Celery 작업
     """
     try:
-        # Pinecone 데이터 가져오기
-        pinecone_instance = get_pinecone_instance()
-        index_name = os.getenv("PINECONE_INDEX_NAME")
-        all_data = get_all_data_from_pinecone(pinecone_instance, index_name)
+        # Pinecone 인스턴스 및 인덱스 이름 가져오기
+        instance = get_pinecone_instance()
+        index_name = os.getenv("PINECONE_INDEX_NAME", "pdf-index")
 
-        if not all_data:
-            return {"status": "error", "message": "No data found in Pinecone"}
+        # 주제와 관련된 데이터 가져오기
+        user_data = get_user_data_by_topic(instance, index_name, user_id, topic)
 
-        # 텍스트를 엔터 기준으로 분할
-        summaries = []
-        for data in all_data:
-            text_chunks = split_text_by_linebreaks(data)
+        # 데이터가 없을 경우 에러 반환
+        if not user_data:
+            return {
+                "status": "error",
+                "message": f"No data found for topic '{topic}' and user ID {user_id}."
+            }
 
-            # 각 텍스트 블록을 GPT로 요약
-            for text_chunk in text_chunks:
-                summary_text = summarize_text_with_gpt(text_chunk)
-                if summary_text:
-                    summaries.append({"topic": "Generated Topic", "summary_text": summary_text})
+        # 원본 텍스트들을 합쳐 요약 생성
+        combined_text = "\n".join([data["original_text"] for data in user_data])
+        summary_result = generate_summary(combined_text)
 
-        # 요약 결과 저장
-        save_summary_to_mysql_and_pinecone(user_id, summaries)
-        return {"status": "success", "message": "Summaries created and saved successfully"}
+        # 요약 생성 성공 여부 확인
+        if summary_result["success"]:
+            # MySQL에 요약 결과 저장
+            UserSummary.objects.create(
+                user_id=user_id,  # Django 모델의 ForeignKey
+                topic=topic,  # 주제
+                summary=summary_result["response"],  # 생성된 요약문
+            )
+
+            return {
+                "status": "success",
+                "message": "Summary created and saved successfully.",
+                "summary": summary_result["response"],
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Failed to generate summary: {summary_result['error']}",
+            }
 
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        # 에러 발생 시 반환
+        return {
+            "status": "error",
+            "message": f"Failed to process summary task: {str(e)}"
+        }
