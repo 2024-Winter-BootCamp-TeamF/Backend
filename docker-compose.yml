@@ -56,13 +56,16 @@ services:
       - app-tier
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.45.6
     container_name: prometheus
     restart: always
     ports:
       - "9090:9090" # Prometheus 웹 인터페이스 포트
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml # Prometheus 설정 파일 연결
+      - ./alert-rules.yml:/etc/alert-rules.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
       - app-tier # Django와 같은 네트워크에서 메트릭 수집 가능
 
@@ -73,9 +76,40 @@ services:
       - ./grafana:/etc/grafana/provisioning # 그라파나 설정(config) 볼륨
       - ./grafana/data:/var/lib/grafana # 그라파나 대시보드 데이터
     ports:
-      - "4000:3000"
+      - "4000:3000" # 4000번 포트
     networks:
       - app-tier
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro #읽기 전용 데이터 - 루트 파일 시스템
+      - /var/run:/var/run:rw #읽기 & 쓰기 - 런타임 데이터
+      - /sys:/sys:ro  #읽기 전용 데이터 - 커널, 하드웨어, 드라이버 정보 등등
+      - /var/lib/docker/:/var/lib/docker:ro #읽기 전용 데이터 - 도커 정보 데이터
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    privileged: true # 컨테이너에 높은 권한 부여 (보안 고려 필요)
+    networks:
+      - app-tier
+
+  alertmanager:
+    image: prom/alertmanager:main
+    container_name: alertmanager
+    ports:
+      - "9093:9093" # 포트 9093 매핑
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager.yml #설정파일 볼륨 추가
+      - ./alertmanager/tmp:/data/ #데이터 담기 전용
+    networks:
+      - app-tier
+    command: --config.file=/etc/alertmanager.yml --log.level=debug #설정파일 설정
+
 
 volumes:
   mysqldata: # 로컬 디렉토리를 지정했으므로, 익명 볼륨 제거 가능
