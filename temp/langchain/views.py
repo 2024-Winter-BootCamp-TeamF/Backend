@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .tasks import process_summary_task
+from .tasks import process_summary_task, delete_user_data_from_pinecone
 from rest_framework.permissions import IsAuthenticated
 
 
@@ -65,3 +65,35 @@ class SummaryAPIView(APIView):
             "message": "Summary generation tasks started successfully.",
             "task_ids": task_ids,  # 각 작업의 ID 반환
         }, status=status.HTTP_202_ACCEPTED)
+
+
+class DeleteUserDataView(APIView):
+    """
+    현재 사용자의 Pinecone 데이터를 삭제하는 API
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Delete all Pinecone data for the current user.",
+        responses={
+            202: "Data deletion task started successfully.",
+            500: "Internal server error.",
+        },
+    )
+    def delete(self, request):
+        try:
+            user_id = request.user.id  # 인증된 유저 ID 가져오기
+            task = delete_user_data_from_pinecone.delay(user_id)  # Celery 비동기 작업 호출
+
+            return Response(
+                {
+                    "message": "Data deletion task started successfully.",
+                    "task_id": task.id,
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to start deletion task: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
