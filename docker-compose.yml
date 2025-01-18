@@ -56,13 +56,16 @@ services:
       - app-tier
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.45.6
     container_name: prometheus
     restart: always
     ports:
       - "9090:9090" # Prometheus 웹 인터페이스 포트
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml # Prometheus 설정 파일 연결
+      - ./alert-rules.yml:/etc/alert-rules.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
       - app-tier # Django와 같은 네트워크에서 메트릭 수집 가능
 
@@ -101,7 +104,7 @@ services:
     ports:
       - "9093:9093" # 포트 9093 매핑
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager.yml #설정파일 볼륨 추가
+      - ./alertmanager.yml:/etc/alertmanager.yml #설정파일 볼륨 추가
       - ./alertmanager/tmp:/data/ #데이터 담기 전용
     networks:
       - app-tier

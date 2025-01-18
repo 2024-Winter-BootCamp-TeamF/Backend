@@ -1,12 +1,24 @@
 global:
-  scrape_interval: 15s #메트릭 수집 인터벌
-  evaluation_interval: 15s #메트릭 평가 인터벌
+  scrape_interval: 15s # 메트릭 수집 인터벌
+  evaluation_interval: 15s # 메트릭 평가 인터벌
+
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets: ['alertmanager:9093']
+
+rule_files:
+  - "/etc/alert-rules.yml"
 
 scrape_configs:
-  - job_name: 'prometheus-data' #프로메테우스 "job_name" 이름 (이건 원하시는거 아무거나 해도 차이가 없습니다)
-    static_configs: #메트릭 수집 설정
-      - targets: ['django:8000']  # Django 컨테이너의 메트릭 엔드포인트
+  - job_name: 'prometheus-data'
+    static_configs:
+      - targets: ['prometheus:9090']
 
   - job_name: 'cadvisor-data'
     static_configs:
       - targets: ['cadvisor:8080']
+
+  - job_name: 'django'
+    static_configs:
+      - targets: ['django:8000']
