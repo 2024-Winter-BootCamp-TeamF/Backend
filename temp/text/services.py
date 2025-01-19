@@ -29,14 +29,3 @@ def get_pinecone_index(instance, index_name):
 
     # 기존 인덱스를 가져옴
     return instance.Index(index_name)
-
-def query_pinecone_data(instance, index_name, redis_key, user_id):
-    """
-    Pinecone에서 특정 Redis 키와 연관된 데이터를 조회 (user_id 기반)
-    """
-    index = get_pinecone_index(instance, index_name)
-    record_id = f"{user_id}:{redis_key}"  # user_id를 포함한 Redis 키를 사용
-    result = index.fetch(ids=[record_id])
-    if not result or record_id not in result["vectors"]:
-        return None
-    return result["vectors"][record_id]
