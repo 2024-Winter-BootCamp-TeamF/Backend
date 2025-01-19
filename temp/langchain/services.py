@@ -61,6 +61,7 @@ def get_user_data_by_topic(instance, index_name, user_id, topic):
 
     except Exception as e:
         raise RuntimeError(f"Error querying user data by topic from Pinecone: {e}")
+
 # 요약 생성
 def summarize_text_with_gpt(text_chunk):
     """
@@ -94,5 +95,6 @@ def save_summary_to_mysql_and_pinecone(user_id, summaries):
                     "metadata": summary,
                 }
             ])
+
     except Exception as e:
         raise RuntimeError(f"Error saving summary: {e}")
