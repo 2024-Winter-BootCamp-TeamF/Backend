@@ -1,7 +1,7 @@
 import os
 from pinecone import Pinecone, ServerlessSpec
 
-
+# Pinecone 초기화
 def get_pinecone_instance():
     """
     Pinecone 인스턴스를 생성
@@ -11,17 +11,32 @@ def get_pinecone_instance():
 
 def get_pinecone_index(instance, index_name):
     """
-    Pinecone 인덱스를 가져옵니다. 없으면 생성합니다.
+    Pinecone 인덱스를 가져옵니다. 인덱스가 없으면 생성합니다.
     """
+    # 인덱스가 없으면 생성
     if index_name not in [i.name for i in instance.list_indexes()]:
+        # ServerlessSpec 정의
         spec = ServerlessSpec(
-            cloud="aws",
-            region=os.getenv("PINECONE_ENVIRONMENT"),
+            cloud="aws",  # 클라우드 제공자
+            region=os.getenv("PINECONE_ENVIRONMENT"),  # 리전 (환경 변수)
         )
         instance.create_index(
             name=index_name,
-            dimension=1536,
-            metric="cosine",
+            dimension=1536,  # text-embedding-ada-002의 차원 수
+            metric="cosine",  # 코사인 거리 측정
             spec=spec,
         )
+
+    # 기존 인덱스를 가져옴
     return instance.Index(index_name)
+
+def query_pinecone_data(instance, index_name, redis_key, user_id):
+    """
+    Pinecone에서 특정 Redis 키와 연관된 데이터를 조회 (user_id 기반)
+    """
+    index = get_pinecone_index(instance, index_name)
+    record_id = f"{user_id}:{redis_key}"  # user_id를 포함한 Redis 키를 사용
+    result = index.fetch(ids=[record_id])
+    if not result or record_id not in result["vectors"]:
+        return None
+    return result["vectors"][record_id]

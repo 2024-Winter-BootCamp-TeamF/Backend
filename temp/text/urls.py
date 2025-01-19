@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import UploadToPineconeView
+from .views import UploadAllToPineconeView
 
 urlpatterns = [
-    path("celery-upload", UploadToPineconeView.as_view(), name="celery-upload"),
+    path("save/", UploadAllToPineconeView.as_view(), name="pinecone"),
 ]
+
+
