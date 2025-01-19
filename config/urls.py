@@ -34,4 +34,6 @@ urlpatterns = [
 
     path("api/pinecone/", include("temp.pinecone.urls")),
 
+    # 문제
+    path('api/question/', include('temp.question.urls')),
 ]
