@@ -33,7 +33,12 @@ urlpatterns = [
     path('api/user/', include('user.urls')),
 
     path("api/pinecone/", include("temp.pinecone.urls")),
-
+  
     # 문제
     path('api/question/', include('temp.question.urls')),
+  
+    path('api/langchain/', include('temp.langchain.urls')), 
+  
+    path('', include('django_prometheus.urls')),
+
 ]
