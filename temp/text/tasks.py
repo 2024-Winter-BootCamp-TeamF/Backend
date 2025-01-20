@@ -15,25 +15,40 @@ def upload_redis_to_pinecone(user_id):
     Redis 데이터를 Pinecone으로 업로드하는 작업
     """
     try:
-        # Redis 키 가져오기
-        keys = redis_client.keys("pdf:*:page:*")
-        if not keys:
-            return {"status": "error", "message": "No data found in Redis."}
+        # Redis에서 페이지 키와 메타 키 가져오기
+        page_keys = redis_client.keys("pdf:*:page:*")
+        meta_keys = redis_client.keys("pdf:*:meta")
+
+        if not page_keys:
+            return {"status": "error", "message": "No page data found in Redis."}
+
+        # 파일 메타데이터 맵 생성
+        file_meta_map = {}
+        for meta_key in meta_keys:
+            meta_data = redis_client.get(meta_key)
+            if meta_data:
+                meta_content = json.loads(meta_data.decode("utf-8"))
+                file_id = meta_key.decode("utf-8").split(":")[1]
+                file_meta_map[file_id] = meta_content.get("file_name", "unknown")
 
         # Pinecone 초기화
         instance = get_pinecone_instance()
         index_name = os.getenv("PINECONE_INDEX_NAME", "pdf-index")
         index = get_pinecone_index(instance, index_name)
 
-        for key in sorted(keys):
+        # 페이지 데이터를 처리하여 Pinecone에 업로드
+        for key in sorted(page_keys):
             page_data = redis_client.get(key)
             if not page_data:
                 continue
 
-            # Redis에서 데이터 로드
             page_content = json.loads(page_data.decode("utf-8"))
             text_field = page_content.get("text")
-            file_name = page_content.get("file_name", "unknown")  # 파일 이름 기본값 설정
+            page_number = page_content.get("page_number")
+
+            # Redis 키에서 file_id 추출
+            file_id = key.decode("utf-8").split(":")[1]
+            file_name = file_meta_map.get(file_id, "unknown")
 
             # 텍스트 처리
             if isinstance(text_field, dict) and "text" in text_field:
@@ -49,10 +64,10 @@ def upload_redis_to_pinecone(user_id):
             # Pinecone에 업로드
             index.upsert([
                 (
-                    f"{key.decode('utf-8')}",  # Redis 키를 사용한 데이터 ID
+                    f"{key.decode('utf-8')}",  # Redis 키를 데이터 ID로 사용
                     vector,  # 생성된 벡터
                     {  # 메타데이터
-                        "page_number": page_content.get("page_number"),
+                        "page_number": page_number,
                         "file_name": file_name,
                         "original_text": text,
                         "category": determine_category(file_name),
