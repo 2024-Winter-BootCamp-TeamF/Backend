@@ -11,7 +11,6 @@ from fpdf import FPDF
 from PIL import Image
 from rest_framework.parsers import MultiPartParser
 from temp.pdf.models import UploadedPDF
-from temp.pdf.utils import extract_and_store_pdf_to_redis
 from temp.openaiService import ask_openai  # OpenAI API 호출 함수
 from temp.pdf.utils import extract_and_store_pdf_to_redis, pdf_to_text
 from django.http import FileResponse, Http404
@@ -27,14 +26,13 @@ class PDFUploadView(APIView):
     parser_classes = [MultiPartParser]
     @pdf_upload_doc
     def post(self, request):
-
         if 'file' not in request.FILES:
             return Response({"error": "파일을 업로드해주세요."}, status=status.HTTP_400_BAD_REQUEST)
+
         uploaded_file = request.FILES['file']
         file_name = uploaded_file.name
         file_extension = os.path.splitext(file_name)[1].lower()
 
-        # 파일이 pdf인 경우
         if file_extension == '.pdf':
             # 임시 경로에 파일 저장
             pdf_path = f"/tmp/{file_name}"
@@ -45,63 +43,21 @@ class PDFUploadView(APIView):
 
             # 텍스트 추출 및 Redis 저장
             try:
-                total_pages = extract_and_store_pdf_to_redis(pdf_path, file_instance.id)
+                total_pages = extract_and_store_pdf_to_redis(pdf_path, file_instance.id, file_name)
             except Exception as e:
                 os.remove(pdf_path)
                 file_instance.delete()
-                return Response({"error": f"Failed to process PDF: {str(e)}"},
-                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": f"Failed to process PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             os.remove(pdf_path)
             return Response({
                 "message": "File uploaded and text extracted successfully",
                 "file_id": file_instance.id,
+                "file_name": file_name,
                 "total_pages": total_pages
             }, status=status.HTTP_201_CREATED)
 
-        else :
-            temp_file_path = f"/tmp/{file_name}"
-            output_pdf_path = f"/tmp/{os.path.splitext(file_name)[0]}.pdf"
-
-            # 1. 업로드된 파일을 로컬에 저장
-            self.local_file_upload(temp_file_path, uploaded_file)
-
-            # 2. 파일 변환
-            try:
-                if file_extension == '.pptx':
-                    self.ppt_to_pdf(temp_file_path, output_pdf_path)
-                elif file_extension == '.docx':
-                    self.word_to_pdf(temp_file_path, output_pdf_path)
-                elif file_extension in ['.jpg', '.jpeg', '.png']:
-                    self.image_to_pdf(temp_file_path, output_pdf_path)
-                else:
-                    return Response({"error": "지원되지 않는 파일 형식입니다."}, status=status.HTTP_400_BAD_REQUEST)
-                logger.info(f"PDF 변환 완료: {output_pdf_path}")
-            except Exception as e:
-                logger.error(f"파일 변환 실패: {str(e)}")
-                return Response({"error": f"파일 변환 실패: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            finally:
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-
-            file_instance = UploadedPDF(file=output_pdf_path, file_name=file_name)
-            file_instance.save()
-
-            # 텍스트 추출 및 Redis 저장
-            try:
-                total_pages = extract_and_store_pdf_to_redis(output_pdf_path, file_instance.id)
-            except Exception as e:
-                os.remove(output_pdf_path)
-                file_instance.delete()
-                return Response({"error": f"Failed to process PDF: {str(e)}"},
-                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            os.remove(output_pdf_path)
-            return Response({
-                "message": "File uploaded and text extracted successfully",
-                "file_id": file_instance.id,
-                "total_pages": total_pages
-            }, status=status.HTTP_201_CREATED)
+        return Response({"error": "Only PDF files are supported."}, status=status.HTTP_400_BAD_REQUEST)
 
 
     def local_file_upload(self, file_path, uploaded_file):

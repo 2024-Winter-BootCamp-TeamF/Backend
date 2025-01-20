@@ -38,9 +38,9 @@ def convert_rect_objects(data):
         return data
 
 
-def extract_and_store_pdf_to_redis(pdf_path, file_id):
+def extract_and_store_pdf_to_redis(pdf_path, file_id, file_name):
     """
-    PDF 텍스트를 페이지별로 Redis에 저장
+    PDF 텍스트를 페이지별로 Redis에 저장하고 파일 이름 메타데이터 추가
     """
     try:
         # PDF 텍스트를 페이지별로 추출
@@ -60,11 +60,15 @@ def extract_and_store_pdf_to_redis(pdf_path, file_id):
             redis_key = f"pdf:{file_id}:page:{page_num}"
             redis_client.set(redis_key, json.dumps({"page_number": page_num, "text": page_text}))
 
+        # Redis에 파일 메타데이터 저장
+        meta_key = f"pdf:{file_id}:meta"
+        redis_client.set(meta_key, json.dumps({"file_name": file_name, "total_pages": len(md_text)}))
+
         # 총 페이지 수 반환
         return len(md_text)
 
     except Exception as e:
-        print("Error in extract_and_store_pdf_to_redis:", str(e))  # 에러 출력
+        print("Error in extract_and_store_pdf_to_redis:", str(e))
         raise e
 
 def pdf_to_text(text_data):
