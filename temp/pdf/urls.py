@@ -5,5 +5,5 @@ urlpatterns = [
     path('<int:file_id>/page/<int:page_number>/', PDFPageTextView.as_view(), name='page-text'),
     path('delete/<int:file_id>/', PDFDeleteByFileIDView.as_view(), name='delete_file_data'),
 
-    path('generate-summary-pdf/<str:redis_key>/', PDFGenerateView.as_view(), name='generate_summary_pdf'),
+    path('summary-pdf/<str:redis_key>/', PDFGenerateView.as_view(), name='summary_pdf'),
 ]
