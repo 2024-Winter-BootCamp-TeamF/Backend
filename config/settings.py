@@ -126,6 +126,7 @@ DATABASES = {
         "PORT": "3306",  # MySQL 기본 포트
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',  # 문자셋 설정
         },
     }
 }
