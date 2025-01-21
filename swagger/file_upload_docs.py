@@ -11,13 +11,6 @@ pdf_upload_doc = swagger_auto_schema(
             type=openapi.TYPE_FILE,
             required=True
         ),
-        openapi.Parameter(
-            'Authorization',
-            openapi.IN_HEADER,
-            description="Token <your_token>",  # 인증 헤더 추가
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
     ],
     responses={
         201: openapi.Response("File uploaded and text extracted successfully"),

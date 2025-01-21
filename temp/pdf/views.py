@@ -15,6 +15,7 @@ from temp.openaiService import ask_openai  # OpenAI API 호출 함수
 from temp.pdf.utils import extract_and_store_pdf_to_redis, pdf_to_text
 from django.http import FileResponse, Http404
 from temp.pinecone.models import PineconeSummary
+from rest_framework.permissions import IsAuthenticated
 
 # Redis 연결 설정
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
@@ -23,9 +24,14 @@ logger = logging.getLogger(__name__)
 
 class PDFUploadView(APIView):
     """PDF 파일 업로드 및 텍스트 추출"""
+    permission_classes = [IsAuthenticated]  # 로그인 여부 확인
     parser_classes = [MultiPartParser]
+
     @pdf_upload_doc
     def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+
         if 'file' not in request.FILES:
             return Response({"error": "파일을 업로드해주세요."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -38,7 +44,12 @@ class PDFUploadView(APIView):
             pdf_path = f"/tmp/{file_name}"
             self.local_file_upload(pdf_path, uploaded_file)
 
-            file_instance = UploadedPDF(file=uploaded_file, file_name=file_name)
+            # PDF 객체 생성 및 저장
+            file_instance = UploadedPDF(
+                file=uploaded_file,
+                file_name=file_name,
+                user=request.user  # 현재 요청한 사용자 정보 추가
+            )
             file_instance.save()
 
             # 텍스트 추출 및 Redis 저장
@@ -58,7 +69,6 @@ class PDFUploadView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response({"error": "Only PDF files are supported."}, status=status.HTTP_400_BAD_REQUEST)
-
 
     def local_file_upload(self, file_path, uploaded_file):
         try:
