@@ -34,6 +34,7 @@ services:
     volumes:
       - "mysqldata:/var/lib/mysql"  # MySQL 데이터 저장
     restart: always
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     networks:
       - app-tier
 
