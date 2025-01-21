@@ -7,7 +7,7 @@ from user.models import UserSummary  # Django 모델 import
 
 
 @shared_task
-def process_summary_task(user_id, topic):
+def process_summary_task(user_id, topic, top_k):
     """
     유저 ID와 주제를 기반으로 Pinecone에서 데이터를 검색하고 요약을 생성하는 Celery 작업
     """
@@ -17,7 +17,7 @@ def process_summary_task(user_id, topic):
         index_name = os.getenv("PINECONE_INDEX_NAME", "teamf")
 
         # 주제와 관련된 데이터 가져오기
-        user_data = get_user_data_by_topic(instance, index_name, user_id, topic)
+        user_data = get_user_data_by_topic(instance, index_name, user_id, topic, top_k)
 
         # 데이터가 없을 경우 에러 반환
         if not user_data:
