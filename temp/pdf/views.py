@@ -14,6 +14,7 @@ from temp.pdf.utils import (extract_and_store_pdf_to_redis,
 from django.http import FileResponse, Http404
 from temp.pinecone.models import PineconeSummary
 import uuid
+from rest_framework.permissions import IsAuthenticated
 
 # Redis 연결 설정
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
@@ -27,6 +28,9 @@ class PDFUploadView(APIView):
 
     @pdf_upload_doc
     def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+
 
         if 'file' not in request.FILES:
             return Response({"error": "파일을 업로드해주세요."}, status=status.HTTP_400_BAD_REQUEST)
@@ -40,7 +44,12 @@ class PDFUploadView(APIView):
             pdf_path = f"/tmp/{file_name}"
             local_file_upload(pdf_path, uploaded_file)
 
-            file_instance = UploadedPDF(file=uploaded_file, file_name=file_name)
+            # PDF 객체 생성 및 저장
+            file_instance = UploadedPDF(
+                file=uploaded_file,
+                file_name=file_name,
+                user=request.user  # 현재 요청한 사용자 정보 추가
+            )
             file_instance.save()
 
             # 텍스트 추출 및 Redis 저장
@@ -102,6 +111,7 @@ class PDFUploadView(APIView):
                 "file_id": file_instance.id,
                 "total_pages": total_pages
             }, status=status.HTTP_201_CREATED)
+          
 
 class PDFPageTextView(APIView):
     """Redis에서 특정 PDF의 페이지 텍스트 확인"""
