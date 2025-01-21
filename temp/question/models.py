@@ -8,6 +8,7 @@ class Question(models.Model):
     ]
 
     question_type = models.CharField(max_length=3, choices=QUESTION_TYPE_CHOICES)
+    question_topic = models.CharField(max_length=255)
     question_text = models.TextField()
     choices = models.JSONField(null=True, blank=True)  # 객관식 선택지 저장
     answer = models.TextField()
