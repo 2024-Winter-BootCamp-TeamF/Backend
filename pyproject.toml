@@ -26,7 +26,8 @@ dependencies = [
     "celery[rabbitmq] (>=5.4.0,<6.0.0)",
     "langchain-community (>=0.3.14,<0.4.0)",
     "django-prometheus (>=2.3.1,<3.0.0)",
-    "django-cors-headers (>=4.6.0,<5.0.0)"
+    "django-cors-headers (>=4.6.0,<5.0.0)",
+    "python-levenshtein (>=0.26.1,<0.27.0)"
 
 ]
 

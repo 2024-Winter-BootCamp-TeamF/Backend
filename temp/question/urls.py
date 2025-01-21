@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import TopicsAndQuestionsRAGView, SubmitAnswerAPIView
+from .views import TopicsAndQuestionsRAGView, SubmitAnswerAPIView, RegenerateQuestionsAPIView
 
 urlpatterns = [
-    path('<int:file_id>/page/<int:page_number>/', TopicsAndQuestionsRAGView.as_view(), name='page-text'),
-    path('<int:question_id>/submit-answer/<str:user_answer>/', SubmitAnswerAPIView.as_view(), name='submit-answer'),
+    path('create/', TopicsAndQuestionsRAGView.as_view(), name='create'),
+    path('submit-answer/', SubmitAnswerAPIView.as_view(), name='submit-answer'),
+    path('create-more/', RegenerateQuestionsAPIView.as_view(), name='create-more'),
 ]
