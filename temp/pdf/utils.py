@@ -1,16 +1,17 @@
 import fitz
 import json
+import os
+from fpdf import FPDF
+from PIL import Image
 from django.conf import settings
-
 from pymupdf4llm.helpers.pymupdf_rag import to_markdown
-
 from config.settings import redis_client
-
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+import subprocess
 
 # 한국어 폰트 등록 (나눔고딕 예시)
 FONT_NAME = "NanumGothic"
@@ -71,6 +72,36 @@ def extract_and_store_pdf_to_redis(pdf_path, file_id, file_name):
         print("Error in extract_and_store_pdf_to_redis:", str(e))
         raise e
 
+def extract_and_store_text_to_redis(input_text, file_id, file_name):
+    """
+    텍스트를 줄바꿈 단위로 Redis에 저장하고 파일 이름 메타데이터 추가
+    """
+    try:
+        # 텍스트를 줄바꿈 기준으로 나누기
+        text_lines = input_text.splitlines()
+
+        # 빈 줄 제거
+        text_lines = [line.strip() for line in text_lines if line.strip()]
+
+        # 변환된 데이터 디버깅용 출력
+        print("Processed Text Data for Redis:", text_lines)
+
+        # Redis에 줄 단위 데이터 저장
+        for line_num, line_text in enumerate(text_lines, start=1):
+            redis_key = f"text:{file_id}:line:{line_num}"
+            redis_client.set(redis_key, json.dumps({"line_number": line_num, "text": line_text}))
+
+        # Redis에 파일 메타데이터 저장
+        meta_key = f"text:{file_id}:meta"
+        redis_client.set(meta_key, json.dumps({"file_name": file_name, "total_lines": len(text_lines)}))
+
+        # 총 줄 수 반환
+        return len(text_lines)
+
+    except Exception as e:
+        print("Error in extract_and_store_text_to_redis:", str(e))
+        raise e
+
 def pdf_to_text(text_data):
     """
     주어진 텍스트 데이터를 한국어 폰트를 사용하여 PDF로 변환.
@@ -121,3 +152,49 @@ def pdf_to_text(text_data):
     pdf.save()
     buffer.seek(0)
     return buffer
+
+def local_file_upload(file_path, uploaded_file):
+    with open(file_path, 'wb') as temp_file:
+        for chunk in uploaded_file.chunks():
+            temp_file.write(chunk)
+
+def ppt_to_pdf(input_path, output_path):
+    subprocess.run([
+        "libreoffice",
+        "--headless",
+        "--convert-to",
+        "pdf",
+        "--outdir",
+        os.path.dirname(output_path),
+        input_path
+    ], check=True)
+
+def word_to_pdf(input_path, output_path):
+    # LibreOffice를 headless 모드로 실행하여 .docx 파일을 .pdf로 변환
+    subprocess.run([
+        "libreoffice",
+        "--headless",
+        "--convert-to",
+        "pdf",
+        "--outdir",
+        os.path.dirname(output_path),
+        input_path
+    ], check=True)
+
+def image_to_pdf(input_path, output_path):
+    image = Image.open(input_path)
+    pdf = FPDF()
+    pdf.add_page()
+
+    image_width, image_height = image.size
+    aspect_ratio = image_height / image_width
+    pdf_width = 210  # A4 크기 (mm)
+    pdf_height = pdf_width * aspect_ratio
+
+    temp_image_path = "/tmp/temp_image.jpg"
+    image.save(temp_image_path)
+
+    pdf.image(temp_image_path, x=0, y=0, w=pdf_width, h=pdf_height)
+    os.remove(temp_image_path)
+
+    pdf.output(output_path)
