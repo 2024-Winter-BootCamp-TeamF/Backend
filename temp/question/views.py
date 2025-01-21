@@ -1,5 +1,4 @@
 import os
-from http.client import responses
 from rest_framework.response import Response
 from rest_framework.utils import json
 from rest_framework.views import APIView
@@ -63,11 +62,24 @@ class TopicsAndQuestionsRAGView(APIView):
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
 
+            # genealogy 메타데이터에 기반한 데이터 수집
+            genealogy_related_contexts = []
+            genealogy_query_result = pinecone_index.query(
+                namespace="default",
+                top_k=10,
+                include_metadata=True,
+                filter={"genealogy": True}  # genealogy 메타데이터 필터
+            )
+            for match in genealogy_query_result.get("matches", []):
+                genealogy_related_contexts.append(match["metadata"].get("text", ""))
+
+            genealogy_context = "\n".join([ctx.strip() for ctx in genealogy_related_contexts if ctx])
+
             # 객관식 생성 위한 OpenAI API 호출
             multiple_choice_prompt = (
-                "다음은 여러 주제와 관련된 텍스트입니다. 주제를 기반으로 객관식 문제 7개를 생성해 주세요.\n"
-                "문제는 한국어로 작성되고, 각 문제에는 선택지 5개와 정답이 포함되어야 합니다.\n"
-                "문제 형식은 다음 JSON 배열로 반환해야 합니다:\n\n"
+                "다음은 여러 주제와 관련된 텍스트입니다. 이 텍스트를 바탕으로 객관식 문제 7개를 생성해주세요. "
+                "문제는 genealogy 메타데이터를 기반으로 한 기존 문제와 유사하게 만들어야 합니다.\n"
+                "문제는 한국어로 작성되며, 각 문제는 다음과 같은 형식을 따라야 합니다:\n\n"
                 "[\n"
                 "  {\n"
                 "    \"type\": \"객관식\",\n"
@@ -80,10 +92,13 @@ class TopicsAndQuestionsRAGView(APIView):
                 "]\n\n"
                 "주의사항:\n"
                 "- JSON 배열 형식만 반환하세요.\n"
+                "- 총 7개의 객관식 문제만 생성하세요.\n"
                 "- 각 문제는 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
+                "- 문제는 genealogy와 연관된 기존 문제와 유사하게 생성해야 합니다.\n"
                 "- JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n\n"
                 f"주제 목록: {', '.join(topics)}\n\n"
-                f"관련 텍스트: {related_context}\n"
+                f"관련 텍스트: {related_context}\n\n"
+                f"genealogy와 관련된 기존 텍스트:\n{genealogy_context}\n"
             )
 
             multiple_choice_result = ask_openai(multiple_choice_prompt, max_tokens=4096)
@@ -111,6 +126,7 @@ class TopicsAndQuestionsRAGView(APIView):
             # 주관식
             subjective_prompt = (
                 "다음은 여러 주제와 관련된 텍스트입니다. 주제를 기반으로 주관식 문제 3개를 생성해 주세요.\n"
+                "문제는 genealogy 메타데이터를 기반으로 한 기존 문제와 유사하게 만들어야 합니다.\n"
                 "문제는 한국어로 작성되고, 각 문제에 대해 한 개의 답을 포함해야 합니다.\n"
                 "문제 형식은 다음 JSON 배열로 반환해야 합니다:\n\n"
                 "[\n"
@@ -125,9 +141,11 @@ class TopicsAndQuestionsRAGView(APIView):
                 "주의사항:\n"
                 "- JSON 배열 형식만 반환하세요.\n"
                 "- 각 문제는 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
+                "- 문제와 정답은 구체적이고 명확해야 합니다.\n"
                 "- JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n\n"
                 f"주제 목록: {', '.join(topics)}\n\n"
                 f"관련 텍스트: {related_context}\n"
+                f"genealogy와 관련된 기존 텍스트:\n{genealogy_context}\n"
             )
 
             subjective_result = ask_openai(subjective_prompt, max_tokens=4096)
