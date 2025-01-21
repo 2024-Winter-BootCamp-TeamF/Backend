@@ -18,6 +18,11 @@ class SummaryAPIView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
+                "top_k": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Number of top results to retrieve for each topic.",
+                    default=10  # 기본값을 10으로 설정
+                ),
                 "topics": openapi.Schema(
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Items(type=openapi.TYPE_STRING),
@@ -55,15 +60,19 @@ class SummaryAPIView(APIView):
                 "error": "Topics are required and must be a list."
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # 요청 본문에서 top_k값 가져오기
+        top_k = request.data.get("top_k")
+
         # 비동기 Celery 작업 호출 (각 topic에 대해 개별 작업 실행)
         task_ids = []
         for topic in topics:
-            task = process_summary_task.delay(user_id, topic)
+            task = process_summary_task.delay(user_id, topic, top_k)
             task_ids.append(task.id)
 
         return Response({
             "message": "Summary generation tasks started successfully.",
             "task_ids": task_ids,  # 각 작업의 ID 반환
+            "top_k": top_k, # top_k값
         }, status=status.HTTP_202_ACCEPTED)
 
 
