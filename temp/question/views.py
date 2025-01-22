@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from temp.pinecone.service import get_pinecone_instance, get_pinecone_index
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import json
 
 class TopicsAndQuestionsRAGView(APIView):
     """
@@ -119,7 +120,7 @@ class TopicsAndQuestionsRAGView(APIView):
             # 데이터 저장
             for multiple_choice_data in multiple_choices:
                 Question.objects.create(
-                    user=user_id,
+                    user=request.user,  # User 객체 전달
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
                     question_text=multiple_choice_data['question'],
@@ -167,7 +168,7 @@ class TopicsAndQuestionsRAGView(APIView):
             # 데이터 저장
             for subjective_data in subjectives:
                 Question.objects.create(
-                    user=user_id,
+                    user=request.user,  # User 객체 전달
                     question_type=subjective_data['type'],
                     question_topic=subjective_data['topic'],
                     question_text=subjective_data['question'],
@@ -291,7 +292,7 @@ class SubmitAnswerAPIView(APIView):
 
             # 사용자 답안 저장
             UserAnswer.objects.create(
-                user=user_id,
+                user=request.user,  # User 객체 전달
                 question=question,
                 user_answer=user_answer,
                 is_correct=is_correct,
@@ -404,7 +405,7 @@ class RegenerateQuestionsAPIView(APIView):
             # 생성된 객관식 문제 저장
             for multiple_choice_data in multiple_choices:
                MoreQuestion.objects.create(
-                    user=user_id,
+                    user=request.user,  # User 객체 전달
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
                     question_text=multiple_choice_data['question'],
@@ -420,3 +421,71 @@ class RegenerateQuestionsAPIView(APIView):
         except Exception as e:
             return Response({"error": f"Failed to process request: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DeleteQuestionView(APIView):
+    """
+    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    """
+
+    @swagger_auto_schema(
+        operation_description="Delete a summary by ID if the user is authorized",
+        responses={
+            200: openapi.Response(description="Question deleted successfully"),
+            404: openapi.Response(description="Question not found or not authorized to delete"),
+        }
+    )
+    def delete(self, request, question_id):
+        # 현재 요청을 보낸 사용자
+        user = request.user
+
+        try:
+            # summary_id와 user를 기준으로 요약 데이터 검색
+            question = Question.objects.get(id=question_id, user=user)
+
+            # 요약 데이터 삭제
+            question.delete()
+
+            return Response({"message": "Question deleted successfully"}, status=status.HTTP_200_OK)
+
+        except Question.DoesNotExist:
+            # 사용자가 본인의 요약 데이터만 삭제할 수 있음
+            return Response({"error": "Question not found or not authorized to delete"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+
+class DeleteUserAnswerView(APIView):
+    """
+    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    """
+
+    @swagger_auto_schema(
+        operation_description="Delete a summary by ID if the user is authorized",
+        responses={
+            200: openapi.Response(description="Summary deleted successfully"),
+            404: openapi.Response(description="Summary not found or not authorized to delete"),
+        }
+    )
+    def delete(self, request, answer_id):
+        try:
+            # 본인 소유의 UserAnswer만 삭제 가능
+            answer = UserAnswer.objects.get(id=answer_id, user=request.user)
+            answer.delete()
+            return Response({"message": "User answer deleted successfully."}, status=status.HTTP_200_OK)
+        except UserAnswer.DoesNotExist:
+            return Response({"error": "Answer not found or not authorized to delete."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+class DeleteMoreQuestionView(APIView):
+    """
+    사용자가 자신의 추가 질문(MoreQuestion)을 삭제하는 API
+    """
+
+    def delete(self, request, question_id):
+        try:
+            # 본인 소유의 MoreQuestion만 삭제 가능
+            question = MoreQuestion.objects.get(id=question_id, user=request.user)
+            question.delete()
+            return Response({"message": "More question deleted successfully."}, status=status.HTTP_200_OK)
+        except MoreQuestion.DoesNotExist:
+            return Response({"error": "More question not found or not authorized to delete."}, status=status.HTTP_404_NOT_FOUND)

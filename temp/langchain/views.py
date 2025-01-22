@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+from user.models import UserSummary
 from .tasks import process_summary_task, delete_user_data_from_pinecone
 from rest_framework.permissions import IsAuthenticated
 
@@ -106,3 +108,33 @@ class DeleteUserDataView(APIView):
                 {"error": f"Failed to start deletion task: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+class DeleteSummaryView(APIView):
+    """
+    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    """
+
+    @swagger_auto_schema(
+        operation_description="Delete a summary by ID if the user is authorized",
+        responses={
+            200: openapi.Response(description="Summary deleted successfully"),
+            404: openapi.Response(description="Summary not found or not authorized to delete"),
+        }
+    )
+    def delete(self, request, summary_id):
+        # 현재 요청을 보낸 사용자
+        user = request.user
+
+        try:
+            # summary_id와 user를 기준으로 요약 데이터 검색
+            summary = UserSummary.objects.get(id=summary_id, user=user)
+
+            # 요약 데이터 삭제
+            summary.delete()
+
+            return Response({"message": "Summary deleted successfully"}, status=status.HTTP_200_OK)
+
+        except UserSummary.DoesNotExist:
+            # 사용자가 본인의 요약 데이터만 삭제할 수 있음
+            return Response({"error": "Summary not found or not authorized to delete"},
+                            status=status.HTTP_404_NOT_FOUND)
