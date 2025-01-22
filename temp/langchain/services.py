@@ -102,9 +102,10 @@ def save_summary_to_mysql_and_pinecone(user_id, summaries):
     except Exception as e:
         raise RuntimeError(f"Error saving summary: {e}")
 
-def save_summaries_to_pdf(user_id, summaries):
+def save_summaries_to_pdf(request, user_id, summaries):
     """
-    요약 결과를 PDF로 변환하여 저장하고 URL 반환
+    요약 결과를 PDF로 변환하여 저장하고 완전한 URL 반환.
+    파일 이름은 사용자가 생성한 요약본 개수에 따라 summaries_{n}.pdf 형식으로 저장.
     """
     try:
         pdf_buffer = BytesIO()
@@ -114,10 +115,14 @@ def save_summaries_to_pdf(user_id, summaries):
         )
         pdf_buffer = text_to_pdf(topic_summaries)
 
-        # 파일 저장 경로 설정
-        file_name = f"summaries_{user_id}.pdf"
+        # 사용자가 생성한 기존 요약본 개수 조회
+        user_summary_count = SummaryPDF.objects.filter(user_id=user_id).count()
+
+        # 파일 이름 생성: summaries_{n}.pdf 형식
+        file_name = f"summaries_{user_summary_count + 1}.pdf"
         file_path = os.path.join(settings.MEDIA_ROOT, "pdfs", file_name)
 
+        # PDF 파일 저장
         with open(file_path, "wb") as pdf_file:
             pdf_file.write(pdf_buffer.getbuffer())
 
@@ -128,7 +133,10 @@ def save_summaries_to_pdf(user_id, summaries):
             file=f"pdfs/{file_name}",
         )
 
-        # 반환할 URL 생성
-        return f"{settings.MEDIA_URL}pdfs/{file_name}"
+        # 완전한 URL 생성
+        pdf_relative_url = f"{settings.MEDIA_URL}pdfs/{file_name}"
+        pdf_full_url = request.build_absolute_uri(pdf_relative_url)
+
+        return pdf_full_url
     except Exception as e:
         raise RuntimeError(f"Error saving summaries to PDF: {e}")

@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .tasks import process_summary_task, delete_user_data_from_pinecone, generate_summary_and_pdf
+from .tasks import delete_user_data_from_pinecone, generate_summary_and_pdf
 from .utils import text_to_pdf
 from rest_framework.permissions import IsAuthenticated
 from django.http import FileResponse, Http404
@@ -58,7 +58,7 @@ class SummaryAPIView(APIView):
         if not topics or not isinstance(topics, list):
             return Response({"error": "Topics are required and must be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = generate_summary_and_pdf(user_id, topics, top_k)
+        result = generate_summary_and_pdf(request, user_id, topics, top_k)
         if result["status"] == "success":
             return Response(result, status=status.HTTP_200_OK)
         else:
