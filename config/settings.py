@@ -94,6 +94,8 @@ CORS_ALLOWED_ORIGINS = [
 # credentials 허용
 CORS_ALLOW_CREDENTIALS = True
 
+X_FRAME_OPTIONS = 'ALLOWALL'  # 모든 도메인에서 iframe 로드를 허용
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
