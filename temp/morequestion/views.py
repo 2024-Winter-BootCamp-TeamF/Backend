@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.utils import json
 from rest_framework.views import APIView
 from temp.openaiService import ask_openai, get_embedding  # OpenAI API 호출 함수
-from .models import Question, UserAnswer
+from .models import MoreQuestion, MoreUserAnswer
+from temp.question.models import Question
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from temp.pinecone.service import get_pinecone_instance, get_pinecone_index
@@ -11,54 +12,63 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import json
 
-class TopicsAndQuestionsRAGView(APIView):
+class RegenerateQuestionsAPIView(APIView):
     """
-    검색 증강 생성(RAG)을 사용하여 파인콘에서 주제를 추출하고 문제를 생성하는 API
+    사용자가 틀린 문제의 주제를 바탕으로 새로운 문제를 생성하는 API
     """
-    permission_classes = [IsAuthenticated]  # 로그인된 사용자만 접근 가능
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="검색 증강 생성(RAG)을 사용하여 파인콘에서 주제를 가져오고 문제를 생성하는 API",
+        operation_description="틀린 문제의 주제를 바탕으로 새로운 문제를 생성하는 API",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "topics": openapi.Schema(
+                "incorrect_question_ids": openapi.Schema(
                     type=openapi.TYPE_ARRAY,
-                    items=openapi.Items(type=openapi.TYPE_STRING),
-                    description="List of topics to summarize (e.g., ['machine learning', 'data science']).",
+                    items=openapi.Items(type=openapi.TYPE_INTEGER),
+                    description="List of IDs of incorrectly answered questions.",
                 )
             },
-            required=["topics"],
+            required=["incorrect_question_ids"],
         ),
         responses={
-            400: openapi.Response(description="Topics are required."),
+            400: openapi.Response(description="Incorrect question IDs are required."),
             500: openapi.Response(description="Internal server error."),
         },
     )
     def post(self, request):
         try:
-            # 사용자 ID 가져오기
-            user_id = request.user.id  # 인증된 사용자 ID
 
-            # 요청 본문에서 topics 가져오기
-            topics = request.data.get("topics")
-            if not topics or not isinstance(topics, list):
+            # 요청 본문에서 틀린 문제 ID 가져오기
+            incorrect_question_ids = request.data.get("incorrect_question_ids")
+            if not incorrect_question_ids or not isinstance(incorrect_question_ids, list):
                 return Response({
-                    "error": "Topics are required and must be a list."
+                    "error": "Incorrect question IDs are required and must be a list."
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+            # 틀린 문제에서 주제 추출
+            incorrect_questions = Question.objects.filter(id__in=incorrect_question_ids)
+            if not incorrect_questions.exists():
+                return Response({"error": "No questions found for the provided IDs."},
+                                status=status.HTTP_404_NOT_FOUND)
+
+            topics = list(set([q.question_topic for q in incorrect_questions if q.question_topic]))
+            if not topics:
+                return Response({"error": "No topics found in the provided questions."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # 파인콘 인스턴스 및 인덱스 가져오기
             pinecone_instance = get_pinecone_instance()
             pinecone_index = get_pinecone_index(pinecone_instance, os.getenv("PINECONE_INDEX_NAME"))
 
             # 주제를 기반으로 Pinecone에서 연관 데이터 검색
             related_contexts = []
             for topic in topics:
-                # Pinecone에서 검색 수행
                 query_result = pinecone_index.query(
                     namespace="default",
                     top_k=10,
                     include_metadata=True,
-                    vector=get_embedding(topic)  # 토픽에 대한 벡터 생성
+                    vector=get_embedding(topic)
                 )
                 for match in query_result.get("matches", []):
                     related_contexts.append(match["metadata"].get("text", ""))
@@ -66,24 +76,11 @@ class TopicsAndQuestionsRAGView(APIView):
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
 
-            # genealogy 메타데이터에 기반한 데이터 수집
-            genealogy_related_contexts = []
-            genealogy_query_result = pinecone_index.query(
-                namespace="default",
-                top_k=10,
-                include_metadata=True,
-                filter={"genealogy": True}  # genealogy 메타데이터 필터
-            )
-            for match in genealogy_query_result.get("matches", []):
-                genealogy_related_contexts.append(match["metadata"].get("text", ""))
-
-            genealogy_context = "\n".join([ctx.strip() for ctx in genealogy_related_contexts if ctx])
-
-            # 객관식 생성 위한 OpenAI API 호출
+            # 객관식 문제 생성 프롬프트 작성
             multiple_choice_prompt = (
-                "다음은 여러 주제와 관련된 텍스트입니다. 이 텍스트를 바탕으로 객관식 문제 7개를 생성해주세요. "
-                "문제는 genealogy 메타데이터를 기반으로 한 기존 문제와 유사하게 만들어야 합니다.\n"
-                "문제는 한국어로 작성되며, 각 문제는 다음과 같은 형식을 따라야 합니다:\n\n"
+                "다음은 여러 주제와 관련된 텍스트입니다. 주제를 기반으로 객관식 문제 5개를 생성해 주세요.\n"
+                "문제는 한국어로 작성되고, 각 문제에는 선택지 5개와 정답이 포함되어야 합니다.\n"
+                "문제 형식은 다음 JSON 배열로 반환해야 합니다:\n\n"
                 "[\n"
                 "  {\n"
                 "    \"type\": \"객관식\",\n"
@@ -94,32 +91,16 @@ class TopicsAndQuestionsRAGView(APIView):
                 "  },\n"
                 "  ...\n"
                 "]\n\n"
-                "주의사항:\n"
-                "- JSON 배열 형식만 반환하세요.\n"
-                "- 총 7개의 객관식 문제만 생성하세요.\n"
-                "- 각 문제는 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
-                "- 문제는 genealogy와 연관된 기존 문제와 유사하게 생성해야 합니다.\n"
-                "- JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n\n"
                 f"주제 목록: {', '.join(topics)}\n\n"
-                f"관련 텍스트: {related_context}\n\n"
-                f"genealogy와 관련된 기존 텍스트:\n{genealogy_context}\n"
+                f"관련 텍스트: {related_context}\n"
             )
 
             multiple_choice_result = ask_openai(multiple_choice_prompt, max_tokens=4096)
-
-            # API 응답이 JSON 배열 형식으로 오도록 설정했으므로 바로 파싱
             multiple_choices = json.loads(multiple_choice_result['response'])
 
-            # 확인용 로그
-            print("Parsed questions:", multiple_choices)
-
-            # 딕셔너리 형식이 아닌 경우 예외 처리
-            if not isinstance(multiple_choices, list):
-                raise ValueError("API response is not a valid JSON array.")
-
-            # 데이터 저장
+            # 생성된 객관식 문제 저장
             for multiple_choice_data in multiple_choices:
-                Question.objects.create(
+               MoreQuestion.objects.create(
                     user=request.user,  # User 객체 전달
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
@@ -128,72 +109,24 @@ class TopicsAndQuestionsRAGView(APIView):
                     answer=multiple_choice_data['answer']
                 )
 
-            # 주관식
-            subjective_prompt = (
-                "다음은 여러 주제와 관련된 텍스트입니다. 주제를 기반으로 주관식 문제 3개를 생성해 주세요.\n"
-                "문제는 genealogy 메타데이터를 기반으로 한 기존 문제와 유사하게 만들어야 합니다.\n"
-                "문제는 한국어로 작성되고, 각 문제에 대해 한 개의 답을 포함해야 합니다.\n"
-                "문제 형식은 다음 JSON 배열로 반환해야 합니다:\n\n"
-                "[\n"
-                "  {\n"
-                "    \"type\": \"주관식\",\n"
-                "    \"topic\": \"주제\",\n"
-                "    \"question\": \"문제 내용\",\n"
-                "    \"answer\": \"정답\"\n"
-                "  },\n"
-                "  ...\n"
-                "]\n\n"
-                "주의사항:\n"
-                "- JSON 배열 형식만 반환하세요.\n"
-                "- 각 문제는 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
-                "- 문제와 정답은 구체적이고 명확해야 합니다.\n"
-                "- JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n\n"
-                f"주제 목록: {', '.join(topics)}\n\n"
-                f"관련 텍스트: {related_context}\n"
-                f"genealogy와 관련된 기존 텍스트:\n{genealogy_context}\n"
-            )
-
-            subjective_result = ask_openai(subjective_prompt, max_tokens=4096)
-
-            # API 응답이 JSON 배열 형식으로 오도록 설정했으므로 바로 파싱
-            subjectives = json.loads(subjective_result['response'])
-
-            # 확인용 로그
-            print("Parsed questions:", subjectives)
-
-            # 딕셔너리 형식이 아닌 경우 예외 처리
-            if not isinstance(subjectives, list):
-                raise ValueError("API response is not a valid JSON array.")
-
-            # 데이터 저장
-            for subjective_data in subjectives:
-                Question.objects.create(
-                    user=request.user,  # User 객체 전달
-                    question_type=subjective_data['type'],
-                    question_topic=subjective_data['topic'],
-                    question_text=subjective_data['question'],
-                    answer=subjective_data['answer']
-                )
-
             return Response({
                 "topics": topics,
-                "multiple_choices": multiple_choices,  # 클라이언트에 객관식 반환
-                "subjectives": subjectives  # 클라이언트에 주관식 반환
+                "generated_multiple_choices": multiple_choices
             })
 
         except Exception as e:
-            return Response({"error": f"Failed to process request: {str(e)}"}, status=500)
-
+            return Response({"error": f"Failed to process request: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class SubmitAnswerAPIView(APIView):
     """
-    사용자가 문제에 대한 답안을 제출하고, 정답 여부를 확인한 후 결과를 저장하는 API
+    사용자가 문제에 대한 답안을 제출하고, 정답 여부를 확인한 후 결과를 저장하는 API(추가 문제용)
     """
 
     permission_classes = [IsAuthenticated]  # 로그인된 사용자만 접근 가능
 
     @swagger_auto_schema(
-        operation_description="사용자가 문제에 대한 답안을 제출하고, 정답 여부를 확인한 후 결과를 저장하는 API",
+        operation_description="사용자가 문제에 대한 답안을 제출하고, 정답 여부를 확인한 후 결과를 저장하는 API(추가 문제용)",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -229,8 +162,6 @@ class SubmitAnswerAPIView(APIView):
     )
     def post(self, request):
         try:
-            # 사용자 ID 가져오기
-            user_id = request.user.id  # 인증된 사용자 ID
 
             # 요청 본문에서 문제 id, 정답 가져오기
             question_id = request.data.get("question_id")
@@ -242,7 +173,7 @@ class SubmitAnswerAPIView(APIView):
                                 status=status.HTTP_400_BAD_REQUEST)
 
             # 문제 찾기
-            question = Question.objects.filter(id=question_id).first()
+            question = MoreQuestion.objects.filter(id=question_id).first()
             if not question:
                 return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -291,7 +222,7 @@ class SubmitAnswerAPIView(APIView):
                 explanation = explanation_result.get("response", "해설을 생성할 수 없습니다.")
 
             # 사용자 답안 저장
-            UserAnswer.objects.create(
+            MoreUserAnswer.objects.create(
                 user=request.user,  # User 객체 전달
                 question=question,
                 user_answer=user_answer,
@@ -313,36 +244,19 @@ class SubmitAnswerAPIView(APIView):
             return Response({"error": f"Failed to process request: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-class DeleteQuestionView(APIView):
+class DeleteMoreQuestionView(APIView):
     """
-    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    사용자가 자신의 추가 질문(MoreQuestion)을 삭제하는 API
     """
 
-    @swagger_auto_schema(
-        operation_description="Delete a summary by ID if the user is authorized",
-        responses={
-            200: openapi.Response(description="Question deleted successfully"),
-            404: openapi.Response(description="Question not found or not authorized to delete"),
-        }
-    )
     def delete(self, request, question_id):
-        # 현재 요청을 보낸 사용자
-        user = request.user
-
         try:
-            # summary_id와 user를 기준으로 요약 데이터 검색
-            question = Question.objects.get(id=question_id, user=user)
-
-            # 요약 데이터 삭제
+            # 본인 소유의 MoreQuestion만 삭제 가능
+            question = MoreQuestion.objects.get(id=question_id, user=request.user)
             question.delete()
-
-            return Response({"message": "Question deleted successfully"}, status=status.HTTP_200_OK)
-
-        except Question.DoesNotExist:
-            # 사용자가 본인의 요약 데이터만 삭제할 수 있음
-            return Response({"error": "Question not found or not authorized to delete"},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "More question deleted successfully."}, status=status.HTTP_200_OK)
+        except MoreQuestion.DoesNotExist:
+            return Response({"error": "More question not found or not authorized to delete."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class DeleteUserAnswerView(APIView):
@@ -359,10 +273,10 @@ class DeleteUserAnswerView(APIView):
     )
     def delete(self, request, answer_id):
         try:
-            # 본인 소유의 UserAnswer만 삭제 가능
-            answer = UserAnswer.objects.get(id=answer_id, user=request.user)
+            # 본인 소유의 MoreUserAnswer 삭제 가능
+            answer = MoreUserAnswer.objects.get(id=answer_id, user=request.user)
             answer.delete()
             return Response({"message": "User answer deleted successfully."}, status=status.HTTP_200_OK)
-        except UserAnswer.DoesNotExist:
+        except MoreUserAnswer.DoesNotExist:
             return Response({"error": "Answer not found or not authorized to delete."},
                             status=status.HTTP_404_NOT_FOUND)

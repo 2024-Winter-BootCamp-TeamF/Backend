@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Create your models here.
-class Question(models.Model):
+class MoreQuestion(models.Model):
     QUESTION_TYPE_CHOICES = [
         ('MCQ', '객관식'),
         ('SAQ', '주관식'),
@@ -18,11 +18,10 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Question {self.id}: {self.question_text}"
+        return f"MoreQuestion {self.id}: {self.question_text}"
 
-
-class UserAnswer(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+class MoreUserAnswer(models.Model):
+    question = models.ForeignKey(MoreQuestion, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # Django 기본 User 모델과 연결
     user_answer = models.CharField(max_length=255)
     is_correct = models.BooleanField(default=False)
