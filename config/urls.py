@@ -38,6 +38,8 @@ urlpatterns = [
   
     # 문제
     path('api/question/', include('temp.question.urls')),
+
+    path('api/morequestion/', include('temp.morequestion.urls')),
   
     path('api/langchain/', include('temp.langchain.urls')), 
   
