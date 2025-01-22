@@ -33,18 +33,37 @@ def text_to_pdf(topic_summaries):
     for topic_summary in topic_summaries.split("\n\n"):
         # 단락별로 처리
         lines = topic_summary.split("\n")
-        for line in lines:
-            # 한 줄이 너무 길면 줄바꿈 처리
-            words = line.split(' ')
-            current_line = ''
-            for word in words:
-                test_line = f"{current_line} {word}".strip()
-                text_width = pdf.stringWidth(test_line, FONT_NAME, 12)
+        for i, line in enumerate(lines):
+            if i == 0 and line.lower().startswith("topic:"):  # 'topic:'으로 시작하는 첫 줄 처리
+                pdf.setFont(FONT_NAME, 15)  # 'topic:' 크기 15로 설정
+                pdf.drawString(LEFT_MARGIN, y_position, line)  # 'topic:' 출력
+                y_position -= LINE_HEIGHT  # 줄 간격 조정
+                pdf.setFont(FONT_NAME, 12)  # 다시 기본 크기 12로 설정
+            else:
+                # 나머지 줄 처리
+                words = line.split(' ')
+                current_line = ''
+                for word in words:
+                    test_line = f"{current_line} {word}".strip()
+                    text_width = pdf.stringWidth(test_line, FONT_NAME, 12)
 
-                if text_width <= max_text_width:
-                    current_line = test_line
-                else:
-                    # 현재 줄 출력
+                    if text_width <= max_text_width:
+                        current_line = test_line
+                    else:
+                        # 현재 줄 출력
+                        pdf.drawString(LEFT_MARGIN, y_position, current_line)
+                        y_position -= LINE_HEIGHT
+
+                        # 페이지 하단에 도달하면 새 페이지로 전환
+                        if y_position < BOTTOM_MARGIN:
+                            pdf.showPage()
+                            pdf.setFont(FONT_NAME, 12)
+                            y_position = PAGE_HEIGHT - TOP_MARGIN
+
+                        current_line = word
+
+                # 남아있는 텍스트 출력
+                if current_line:
                     pdf.drawString(LEFT_MARGIN, y_position, current_line)
                     y_position -= LINE_HEIGHT
 
@@ -53,19 +72,6 @@ def text_to_pdf(topic_summaries):
                         pdf.showPage()
                         pdf.setFont(FONT_NAME, 12)
                         y_position = PAGE_HEIGHT - TOP_MARGIN
-
-                    current_line = word
-
-            # 남아있는 텍스트 출력
-            if current_line:
-                pdf.drawString(LEFT_MARGIN, y_position, current_line)
-                y_position -= LINE_HEIGHT
-
-                # 페이지 하단에 도달하면 새 페이지로 전환
-                if y_position < BOTTOM_MARGIN:
-                    pdf.showPage()
-                    pdf.setFont(FONT_NAME, 12)
-                    y_position = PAGE_HEIGHT - TOP_MARGIN
 
         # 단락 간 간격 추가
         y_position -= LINE_HEIGHT
