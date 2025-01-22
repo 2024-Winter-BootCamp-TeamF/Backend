@@ -7,6 +7,7 @@ from .models import MoreQuestion, MoreUserAnswer
 from temp.question.models import Question
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from .serializer import WrongAnswerSerializer, AllQuestionsSerializer
 from temp.pinecone.service import get_pinecone_instance, get_pinecone_index
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -280,3 +281,27 @@ class DeleteUserAnswerView(APIView):
         except MoreUserAnswer.DoesNotExist:
             return Response({"error": "Answer not found or not authorized to delete."},
                             status=status.HTTP_404_NOT_FOUND)
+
+class WrongAnswerView(APIView):
+    """
+    특정 사용자가 자신의 오답을 모두 볼 수 있는 API
+    """
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+    def get(self, request):
+        # 현재 로그인된 유저의 오답(UserAnswer에서 is_correct가 False) 필터링
+        incorrect_answers = MoreUserAnswer.objects.filter(user=request.user, is_correct=False)
+        serializer = WrongAnswerSerializer(incorrect_answers, many=True)
+        return Response(serializer.data)
+
+class AllQuestionsView(APIView):
+    """
+    특정 사용자가 자신의 모든 문제를 볼 수 있는 API
+    """
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+    def get(self, request):
+        # 현재 로그인된 유저가 작성한 모든 Question 필터링
+        all_questions = MoreQuestion.objects.filter(user=request.user)
+        serializer = AllQuestionsSerializer(all_questions, many=True)
+        return Response(serializer.data)
