@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.utils import json
 from rest_framework.views import APIView
 from temp.openaiService import ask_openai, get_embedding  # OpenAI API 호출 함수
-from .models import Question, UserAnswer
+from .models import Question, UserAnswer, MoreQuestion
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from temp.pinecone.service import get_pinecone_instance, get_pinecone_index
@@ -36,6 +36,9 @@ class TopicsAndQuestionsRAGView(APIView):
     )
     def post(self, request):
         try:
+            # 사용자 ID 가져오기
+            user_id = request.user.id  # 인증된 사용자 ID
+
             # 요청 본문에서 topics 가져오기
             topics = request.data.get("topics")
             if not topics or not isinstance(topics, list):
@@ -116,6 +119,7 @@ class TopicsAndQuestionsRAGView(APIView):
             # 데이터 저장
             for multiple_choice_data in multiple_choices:
                 Question.objects.create(
+                    user=user_id,
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
                     question_text=multiple_choice_data['question'],
@@ -163,6 +167,7 @@ class TopicsAndQuestionsRAGView(APIView):
             # 데이터 저장
             for subjective_data in subjectives:
                 Question.objects.create(
+                    user=user_id,
                     question_type=subjective_data['type'],
                     question_topic=subjective_data['topic'],
                     question_text=subjective_data['question'],
@@ -223,6 +228,9 @@ class SubmitAnswerAPIView(APIView):
     )
     def post(self, request):
         try:
+            # 사용자 ID 가져오기
+            user_id = request.user.id  # 인증된 사용자 ID
+
             # 요청 본문에서 문제 id, 정답 가져오기
             question_id = request.data.get("question_id")
             user_answer = request.data.get("user_answer")
@@ -267,13 +275,6 @@ class SubmitAnswerAPIView(APIView):
                 return Response({"error": f"Unsupported question type: {question.question_type}"},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-            # 사용자 답안 저장
-            UserAnswer.objects.create(
-                question=question,
-                user_answer=user_answer,
-                is_correct=is_correct
-            )
-
             # 틀린 경우 해설 제공
             explanation = None
             if not is_correct:
@@ -284,10 +285,18 @@ class SubmitAnswerAPIView(APIView):
                     f"정답: {correct_answer}\n\n"
                     "이 문제의 해설을 자세히 설명해주세요. 가능한 경우, 문제의 배경이나 풀이 방법을 포함해주세요."
                 )
-
                 # OpenAI API 호출하여 해설 받기
                 explanation_result = ask_openai(explanation_prompt, max_tokens=1024)
                 explanation = explanation_result.get("response", "해설을 생성할 수 없습니다.")
+
+            # 사용자 답안 저장
+            UserAnswer.objects.create(
+                user=user_id,
+                question=question,
+                user_answer=user_answer,
+                is_correct=is_correct,
+                explanation=explanation
+            )
 
             # 결과 반환
             return Response({
@@ -296,7 +305,7 @@ class SubmitAnswerAPIView(APIView):
                 "user_answer": user_answer,
                 "correct_answer": correct_answer,
                 "is_correct": is_correct,
-                "explanation": explanation if not is_correct else None  # 틀렸을 때만 해설 제공
+                "explanation": explanation
             })
 
         except Exception as e:
@@ -330,6 +339,9 @@ class RegenerateQuestionsAPIView(APIView):
     )
     def post(self, request):
         try:
+            # 사용자 ID 가져오기
+            user_id = request.user.id  # 인증된 사용자 ID
+
             # 요청 본문에서 틀린 문제 ID 가져오기
             incorrect_question_ids = request.data.get("incorrect_question_ids")
             if not incorrect_question_ids or not isinstance(incorrect_question_ids, list):
@@ -391,7 +403,8 @@ class RegenerateQuestionsAPIView(APIView):
 
             # 생성된 객관식 문제 저장
             for multiple_choice_data in multiple_choices:
-                Question.objects.create(
+               MoreQuestion.objects.create(
+                    user=user_id,
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
                     question_text=multiple_choice_data['question'],
