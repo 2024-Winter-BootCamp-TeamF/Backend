@@ -2,7 +2,9 @@ import os
 from pinecone import Pinecone, ServerlessSpec
 from temp.openaiService import generate_summary, get_embedding
 from user.models import UserSummary  # Django 모델 (MySQL 저장)
-
+from io import BytesIO
+from .utils import text_to_pdf
+from .models import SummaryPDF
 
 # Pinecone 인스턴스 생성
 def get_pinecone_instance():
@@ -98,3 +100,23 @@ def save_summary_to_mysql_and_pinecone(user_id, summaries):
 
     except Exception as e:
         raise RuntimeError(f"Error saving summary: {e}")
+
+def save_summaries_to_pdf(user_id, summaries):
+    """
+    요약 결과를 PDF로 변환하여 저장
+    """
+    try:
+        pdf_buffer = BytesIO()
+        topic_summaries = "\n\n".join([f"Topic: {summary['topic']}\n\n{summary['summary_text']}" for summary in summaries])
+        pdf_buffer = text_to_pdf(topic_summaries)
+
+        # PDF를 모델에 저장
+        file_name = f"summaries_{user_id}.pdf"
+        uploaded_pdf = SummaryPDF.objects.create(
+            user_id=user_id,
+            file_name=file_name,
+        )
+        uploaded_pdf.file.save(file_name, pdf_buffer)
+        return uploaded_pdf.file.url
+    except Exception as e:
+        raise RuntimeError(f"Error saving summaries to PDF: {e}")

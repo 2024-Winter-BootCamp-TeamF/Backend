@@ -1,4 +1,4 @@
-from .services import get_pinecone_instance
+from .services import get_pinecone_instance, save_summaries_to_pdf, summarize_text_with_gpt
 import os
 from celery import shared_task
 from temp.langchain.services import get_user_data_by_topic
@@ -83,3 +83,33 @@ def delete_user_data_from_pinecone(user_id):
             "status": "error",
             "message": f"Failed to delete data for user ID {user_id}: {str(e)}"
         }
+
+@shared_task
+def process_summary_task(user_id, topics, top_k):
+    """
+    여러 토픽에 대해 요약을 생성하고 PDF로 저장
+    """
+    try:
+        instance = get_pinecone_instance()
+        index_name = os.getenv("PINECONE_INDEX_NAME", "teamf")
+
+        summaries = []
+        for topic in topics:
+            user_data = get_user_data_by_topic(instance, index_name, user_id, topic, top_k)
+            if not user_data:
+                continue
+
+            combined_text = "\n".join([data["original_text"] for data in user_data])
+            summary_result = summarize_text_with_gpt(combined_text)
+
+            if summary_result:
+                summaries.append({"topic": topic, "summary_text": summary_result})
+
+        if summaries:
+            pdf_url = save_summaries_to_pdf(user_id, summaries)
+            return {"status": "success", "pdf_url": pdf_url}
+
+        return {"status": "error", "message": "No summaries generated."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+

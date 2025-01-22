@@ -12,31 +12,31 @@ from temp.pinecone.models import PineconeSummary
 
 class SummaryAPIView(APIView):
     """
-    Pinecone 데이터를 기반으로 주제별 요약을 생성하는 API
+    주제별 요약을 생성하는 API
     """
-    permission_classes = [IsAuthenticated]  # 로그인된 사용자만 접근 가능
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Generate summaries for multiple topics in Pinecone",
+        operation_description="Generate summaries for the given topics.",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "top_k": openapi.Schema(
-                    type=openapi.TYPE_INTEGER,
-                    description="Number of top results to retrieve for each topic.",
-                    default=10  # 기본값을 10으로 설정
-                ),
                 "topics": openapi.Schema(
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Items(type=openapi.TYPE_STRING),
-                    description="List of topics to summarize (e.g., ['machine learning', 'data science']).",
+                    description="List of topics to generate summaries for (e.g., ['AI', 'Machine Learning']).",
+                ),
+                "top_k": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Number of top results to retrieve for each topic.",
+                    default=10
                 )
             },
             required=["topics"],
         ),
         responses={
             202: openapi.Response(
-                description="Summary generation tasks started successfully.",
+                description="Summary tasks have been started successfully.",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -44,38 +44,31 @@ class SummaryAPIView(APIView):
                         "task_ids": openapi.Schema(
                             type=openapi.TYPE_ARRAY,
                             items=openapi.Items(type=openapi.TYPE_STRING),
+                            description="List of task IDs for tracking the summary generation.",
                         ),
-                    }
+                    },
                 ),
             ),
-            400: openapi.Response(description="Topics are required."),
-            500: openapi.Response(description="Internal server error."),
-        },
+            400: openapi.Response(description="Bad Request. Missing or invalid input."),
+        }
     )
     def post(self, request):
-        # 현재 사용자 ID 가져오기
         user_id = request.user.id
-
-        # 요청 본문에서 topics 가져오기
         topics = request.data.get("topics")
+        top_k = request.data.get("top_k", 10)
+
         if not topics or not isinstance(topics, list):
-            return Response({
-                "error": "Topics are required and must be a list."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Topics are required and must be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 요청 본문에서 top_k값 가져오기
-        top_k = request.data.get("top_k")
-
-        # 비동기 Celery 작업 호출 (각 topic에 대해 개별 작업 실행)
+        # 비동기 Celery 작업 호출
         task_ids = []
         for topic in topics:
             task = process_summary_task.delay(user_id, topic, top_k)
             task_ids.append(task.id)
 
         return Response({
-            "message": "Summary generation tasks started successfully.",
-            "task_ids": task_ids,  # 각 작업의 ID 반환
-            "top_k": top_k, # top_k값
+            "message": "Summary tasks have been started successfully.",
+            "task_ids": task_ids
         }, status=status.HTTP_202_ACCEPTED)
 
 
