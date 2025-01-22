@@ -84,8 +84,7 @@ def delete_user_data_from_pinecone(user_id):
             "message": f"Failed to delete data for user ID {user_id}: {str(e)}"
         }
 
-@shared_task
-def process_summary_task(user_id, topics, top_k):
+def generate_summary_and_pdf(user_id, topics, top_k):
     """
     여러 토픽에 대해 요약을 생성하고 PDF로 저장
     """
@@ -112,4 +111,3 @@ def process_summary_task(user_id, topics, top_k):
         return {"status": "error", "message": "No summaries generated."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-

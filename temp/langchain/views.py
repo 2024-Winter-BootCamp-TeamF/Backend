@@ -3,21 +3,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .tasks import process_summary_task, delete_user_data_from_pinecone
+from .tasks import process_summary_task, delete_user_data_from_pinecone, generate_summary_and_pdf
 from .utils import text_to_pdf
 from rest_framework.permissions import IsAuthenticated
 from django.http import FileResponse, Http404
 from temp.pinecone.models import PineconeSummary
 
-
 class SummaryAPIView(APIView):
     """
-    주제별 요약을 생성하는 API
+    주제별 요약을 생성하고 PDF URL 반환
     """
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Generate summaries for the given topics.",
+        operation_description="Generate summaries for the given topics and return a PDF URL.",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -35,18 +34,17 @@ class SummaryAPIView(APIView):
             required=["topics"],
         ),
         responses={
-            202: openapi.Response(
-                description="Summary tasks have been started successfully.",
+            200: openapi.Response(
+                description="Summary generated and PDF URL returned.",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        "message": openapi.Schema(type=openapi.TYPE_STRING),
-                        "task_ids": openapi.Schema(
-                            type=openapi.TYPE_ARRAY,
-                            items=openapi.Items(type=openapi.TYPE_STRING),
-                            description="List of task IDs for tracking the summary generation.",
-                        ),
-                    },
+                        "status": openapi.Schema(type=openapi.TYPE_STRING),
+                        "pdf_url": openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description="URL to the generated PDF file."
+                        )
+                    }
                 ),
             ),
             400: openapi.Response(description="Bad Request. Missing or invalid input."),
@@ -60,16 +58,11 @@ class SummaryAPIView(APIView):
         if not topics or not isinstance(topics, list):
             return Response({"error": "Topics are required and must be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 비동기 Celery 작업 호출
-        task_ids = []
-        for topic in topics:
-            task = process_summary_task.delay(user_id, topic, top_k)
-            task_ids.append(task.id)
-
-        return Response({
-            "message": "Summary tasks have been started successfully.",
-            "task_ids": task_ids
-        }, status=status.HTTP_202_ACCEPTED)
+        result = generate_summary_and_pdf(user_id, topics, top_k)
+        if result["status"] == "success":
+            return Response(result, status=status.HTTP_200_OK)
+        else:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DeleteUserDataView(APIView):
