@@ -4,7 +4,10 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .tasks import process_summary_task, delete_user_data_from_pinecone
+from .utils import text_to_pdf
 from rest_framework.permissions import IsAuthenticated
+from django.http import FileResponse, Http404
+from temp.pinecone.models import PineconeSummary
 
 
 class SummaryAPIView(APIView):
@@ -106,3 +109,27 @@ class DeleteUserDataView(APIView):
                 {"error": f"Failed to start deletion task: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+class PDFGenerateView(APIView):
+    """
+    MySQL에서 텍스트 데이터를 가져와 PDF로 변환해 반환
+    """
+    def get(self, request, redis_key):
+        try:
+            # MySQL에서 해당 redis_key와 관련된 데이터 가져오기
+            summary_instance = PineconeSummary.objects.get(redis_key=redis_key)
+            summary_text = summary_instance.summary_text  # 요약본 가져오기
+
+            if not summary_text:
+                raise Http404("Summary text not found.")
+
+            # PDF 생성
+            pdf_buffer = text_to_pdf(summary_text)
+
+            # PDF 반환
+            return FileResponse(pdf_buffer, as_attachment=True, filename=f"{redis_key}_summary.pdf")
+
+        except PineconeSummary.DoesNotExist:
+            return Response({"error": "Summary not found for the given redis_key."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

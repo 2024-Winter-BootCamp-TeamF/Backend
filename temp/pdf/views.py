@@ -9,12 +9,18 @@ from rest_framework.views import APIView
 from swagger.file_upload_docs import pdf_upload_doc, genealogy_upload_doc
 from rest_framework.parsers import MultiPartParser
 from temp.pdf.models import UploadedPDF
-from temp.pdf.utils import (extract_and_store_pdf_to_redis,
-                            pdf_to_text, local_file_upload, extract_and_store_text_to_redis, ppt_to_pdf, word_to_pdf, image_to_pdf)
+from temp.pdf.utils import (
+    extract_and_store_pdf_to_redis,
+    pdf_to_text,
+    local_file_upload,
+    extract_and_store_text_to_redis,
+    ppt_to_pdf,
+    word_to_pdf,
+    image_to_pdf
+)
 from django.http import FileResponse, Http404
 from temp.pinecone.models import PineconeSummary
 import uuid
-from rest_framework.permissions import IsAuthenticated
 
 # Redis 연결 설정
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
