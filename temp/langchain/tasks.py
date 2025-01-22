@@ -101,8 +101,12 @@ def generate_summary_and_pdf(user_id, topics, top_k):
             combined_text = "\n".join([data["original_text"] for data in user_data])
             summary_result = summarize_text_with_gpt(combined_text)
 
-            if summary_result:
-                summaries.append({"topic": topic, "summary_text": summary_result})
+            # JSON에서 "response" 키의 값만 사용
+            if summary_result and summary_result.get("success"):
+                summaries.append({
+                    "topic": topic,
+                    "summary_text": summary_result["response"]  # 요약된 텍스트만 저장
+                })
 
         if summaries:
             pdf_url = save_summaries_to_pdf(user_id, summaries)

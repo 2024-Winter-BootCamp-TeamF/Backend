@@ -108,6 +108,7 @@ def save_summaries_to_pdf(user_id, summaries):
     """
     try:
         pdf_buffer = BytesIO()
+        # JSON 데이터에서 요약 텍스트만 사용
         topic_summaries = "\n\n".join(
             [f"Topic: {summary['topic']}\n\n{summary['summary_text']}" for summary in summaries]
         )
