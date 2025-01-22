@@ -1,8 +1,11 @@
 import os
+from django.conf import settings
 from pinecone import Pinecone, ServerlessSpec
 from temp.openaiService import generate_summary, get_embedding
 from user.models import UserSummary  # Django 모델 (MySQL 저장)
-
+from io import BytesIO
+from .utils import text_to_pdf
+from .models import SummaryPDF
 
 # Pinecone 인스턴스 생성
 def get_pinecone_instance():
@@ -98,3 +101,42 @@ def save_summary_to_mysql_and_pinecone(user_id, summaries):
 
     except Exception as e:
         raise RuntimeError(f"Error saving summary: {e}")
+
+def save_summaries_to_pdf(request, user_id, summaries):
+    """
+    요약 결과를 PDF로 변환하여 저장하고 완전한 URL 반환.
+    파일 이름은 사용자가 생성한 요약본 개수에 따라 summaries_{n}.pdf 형식으로 저장.
+    """
+    try:
+        pdf_buffer = BytesIO()
+        # JSON 데이터에서 요약 텍스트만 사용
+        topic_summaries = "\n\n".join(
+            [f"Topic: {summary['topic']}\n\n{summary['summary_text']}" for summary in summaries]
+        )
+        pdf_buffer = text_to_pdf(topic_summaries)
+
+        # 사용자가 생성한 기존 요약본 개수 조회
+        user_summary_count = SummaryPDF.objects.filter(user_id=user_id).count()
+
+        # 파일 이름 생성: summaries_{n}.pdf 형식
+        file_name = f"summaries_{user_summary_count + 1}.pdf"
+        file_path = os.path.join(settings.MEDIA_ROOT, "pdfs", file_name)
+
+        # PDF 파일 저장
+        with open(file_path, "wb") as pdf_file:
+            pdf_file.write(pdf_buffer.getbuffer())
+
+        # SummaryPDF 모델에 저장
+        SummaryPDF.objects.create(
+            user_id=user_id,
+            file_name=file_name,
+            file=f"pdfs/{file_name}",
+        )
+
+        # 완전한 URL 생성
+        pdf_relative_url = f"{settings.MEDIA_URL}pdfs/{file_name}"
+        pdf_full_url = request.build_absolute_uri(pdf_relative_url)
+
+        return pdf_full_url
+    except Exception as e:
+        raise RuntimeError(f"Error saving summaries to PDF: {e}")
