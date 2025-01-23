@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-		        cleanWs() #워크스페이스 청소
+		        cleanWs() //워크스페이스 청소
                 git branch: 'main', url: "https://github.com/2024-Winter-BootCamp-TeamF/Backend.git"
             }
         }
