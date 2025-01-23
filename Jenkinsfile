@@ -43,7 +43,7 @@ pipeline {
                 script {
                     sh "docker build -t ${repository}:${IMAGE_TAG} ." // docker build
                 }
-                slackSend message: "Build Started - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+                //slackSend message: "Build Started - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
             }
         }
 
