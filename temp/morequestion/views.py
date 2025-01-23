@@ -101,7 +101,7 @@ class RegenerateQuestionsAPIView(APIView):
 
             # 생성된 객관식 문제 저장
             for multiple_choice_data in multiple_choices:
-               MoreQuestion.objects.create(
+               question = MoreQuestion.objects.create(
                     user=request.user,  # User 객체 전달
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
@@ -109,6 +109,8 @@ class RegenerateQuestionsAPIView(APIView):
                     choices=multiple_choice_data.get('choices'),
                     answer=multiple_choice_data['answer']
                 )
+               # 생성된 ID를 추가
+               multiple_choice_data['question_id'] = question.id
 
             return Response({
                 "topics": topics,

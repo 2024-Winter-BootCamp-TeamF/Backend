@@ -12,6 +12,10 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import json
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class TopicsAndQuestionsRAGView(APIView):
     """
     검색 증강 생성(RAG)을 사용하여 파인콘에서 주제를 추출하고 문제를 생성하는 API
@@ -112,15 +116,15 @@ class TopicsAndQuestionsRAGView(APIView):
             multiple_choices = json.loads(multiple_choice_result['response'])
 
             # 확인용 로그
-            print("Parsed questions:", multiple_choices)
+            logger.info("Parsed multiple choice questions: %s", multiple_choices)
 
             # 딕셔너리 형식이 아닌 경우 예외 처리
             if not isinstance(multiple_choices, list):
                 raise ValueError("API response is not a valid JSON array.")
 
-            # 데이터 저장
+            # 데이터 저장 및 question_id 추가
             for multiple_choice_data in multiple_choices:
-                Question.objects.create(
+                question = Question.objects.create(
                     user=request.user,  # User 객체 전달
                     question_type=multiple_choice_data['type'],
                     question_topic=multiple_choice_data['topic'],
@@ -128,6 +132,9 @@ class TopicsAndQuestionsRAGView(APIView):
                     choices=multiple_choice_data.get('choices'),
                     answer=multiple_choice_data['answer']
                 )
+                # 생성된 ID를 추가
+                multiple_choice_data['question_id'] = question.id
+                logger.info("Created multiple choice question with ID: %s", question.id)
 
             # 주관식
             subjective_prompt = (
@@ -160,21 +167,24 @@ class TopicsAndQuestionsRAGView(APIView):
             subjectives = json.loads(subjective_result['response'])
 
             # 확인용 로그
-            print("Parsed questions:", subjectives)
+            logger.info("Parsed subjective questions: %s", subjectives)
 
             # 딕셔너리 형식이 아닌 경우 예외 처리
             if not isinstance(subjectives, list):
                 raise ValueError("API response is not a valid JSON array.")
 
-            # 데이터 저장
+            # 데이터 저장 및 question_id 추가
             for subjective_data in subjectives:
-                Question.objects.create(
+                question = Question.objects.create(
                     user=request.user,  # User 객체 전달
                     question_type=subjective_data['type'],
                     question_topic=subjective_data['topic'],
                     question_text=subjective_data['question'],
                     answer=subjective_data['answer']
                 )
+                # 생성된 ID를 추가
+                subjective_data['question_id'] = question.id
+                logger.info("Created subjective question with ID: %s", question.id)
 
             return Response({
                 "topics": topics,
@@ -183,6 +193,7 @@ class TopicsAndQuestionsRAGView(APIView):
             })
 
         except Exception as e:
+            logger.error("Failed to process request: %s", str(e))
             return Response({"error": f"Failed to process request: {str(e)}"}, status=500)
 
 
