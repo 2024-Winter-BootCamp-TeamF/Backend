@@ -63,7 +63,8 @@ class TopicsAndQuestionsRAGView(APIView):
                     namespace="default",
                     top_k=10,
                     include_metadata=True,
-                    vector=get_embedding(topic)  # 토픽에 대한 벡터 생성
+                    vector=get_embedding(topic),  # 토픽에 대한 벡터 생성
+                    filter={"user_id": str(user_id)}  # metadata의 user_id 필터 추가
                 )
                 for match in query_result.get("matches", []):
                     related_contexts.append(match["metadata"].get("text", ""))
@@ -71,13 +72,13 @@ class TopicsAndQuestionsRAGView(APIView):
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
 
-            # genealogy 메타데이터에 기반한 데이터 수집
+            # genealogy 메타데이터에 기반한 데이터 수집 (user_id 기반 검색 추가)
             genealogy_related_contexts = []
             genealogy_query_result = pinecone_index.query(
                 namespace="default",
                 top_k=10,
                 include_metadata=True,
-                filter={"genealogy": True}  # genealogy 메타데이터 필터
+                filter={"genealogy": True, "user_id": str(user_id)}  # genealogy와 user_id 필터 결합
             )
             for match in genealogy_query_result.get("matches", []):
                 genealogy_related_contexts.append(match["metadata"].get("text", ""))
