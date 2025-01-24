@@ -402,3 +402,76 @@ class AllQuestionsView(APIView):
         all_questions = Question.objects.filter(user=request.user)
         serializer = AllQuestionsSerializer(all_questions, many=True)
         return Response(serializer.data)
+
+
+class ConfusedAnswerView(APIView):
+    """
+    특정 사용자가 특정 문제가 햇갈린 경우 그 문제에 대한 정보를 반환해주는 api
+    """
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+
+    @swagger_auto_schema(
+        operation_description="특정 사용자가 특정 문제가 햇갈린 경우 그 문제에 대한 정보를 반환해주는 api",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "question_id": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="The ID of the question to answer."
+                ),
+            },
+            required=["question_id"],
+        ),
+        responses={
+            200: openapi.Response(
+                description="The result of the answer submission.",
+                examples={
+                    "application/json": {
+                        "question_id": 1,
+                        "question_type": "객관식",
+                        "user_answer": "사용자 답변",
+                        "correct_answer": "정답",
+                        "is_correct": True,
+                        "explanation": "해설 내용"
+                    }
+                }
+            ),
+            400: openapi.Response(description="Invalid input, missing question_id or user_answer."),
+            404: openapi.Response(description="Question not found."),
+            500: openapi.Response(description="Internal server error."),
+        },
+    )
+    def post(self, request):
+        question_id = request.data.get("question_id")
+
+        # 입력 유효성 검사
+        if not question_id:
+            return Response({"error": "question_id가 누락되었습니다."}, status=400)
+
+        try:
+            # 현재 사용자의 해당 문제 답변 가져오기
+            user_answer = UserAnswer.objects.get(user=request.user, question_id=question_id)
+        except UserAnswer.DoesNotExist:
+            return Response({"error": "해당 문제에 대한 사용자의 답변이 존재하지 않습니다."}, status=404)
+
+        # 정답일 경우 해설 생성
+        if user_answer.is_correct and not user_answer.explanation:
+            explanation_prompt = (
+                f"다음은 문제에 대한 해설을 요청하는 문장입니다:\n\n"
+                f"문제: {user_answer.question.question_text}\n"
+                f"정답: {user_answer.question.answer}\n\n"
+                "이 문제의 해설을 자세히 설명해주세요. 문제의 배경, 풀이 방법 등을 포함해주세요."
+            )
+
+            # OpenAI API 호출로 해설 생성
+            explanation_result = ask_openai(explanation_prompt, max_tokens=1024)
+            explanation = explanation_result.get("response", "해설을 생성할 수 없습니다.")
+
+            # 해설 저장
+            user_answer.explanation = explanation
+            user_answer.save()
+
+        # 직렬화를 통해 데이터 반환
+        serializer = WrongAnswerSerializer(user_answer)
+        return Response(serializer.data, status=200)
