@@ -103,12 +103,12 @@ class TopicsAndQuestionsRAGView(APIView):
                 "주의사항:\n"
                 "- JSON 배열 형식만 반환하세요.\n"
                 "- 총 7개의 객관식 문제만 생성하세요.\n"
-                "- 각 문제는 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
+                "- 각 문제는 관련 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
                 "- 문제는 genealogy와 연관된 기존 문제와 유사하게 생성해야 합니다.\n"
                 "- JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n\n"
                 f"주제 목록: {', '.join(topics)}\n\n"
                 f"관련 텍스트: {related_context}\n\n"
-                f"genealogy와 관련된 기존 텍스트:\n{genealogy_context}\n"
+                f"genealogy와 관련된 기존 문제:\n{genealogy_context}\n"
             )
 
             multiple_choice_result = ask_openai(multiple_choice_prompt, max_tokens=4096)
