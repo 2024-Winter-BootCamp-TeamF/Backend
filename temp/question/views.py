@@ -67,7 +67,7 @@ class TopicsAndQuestionsRAGView(APIView):
                     filter={"user_id": str(user_id)}  # metadata의 user_id 필터 추가
                 )
                 for match in query_result.get("matches", []):
-                    related_contexts.append(match["metadata"].get("text", ""))
+                    related_contexts.append(match["metadata"].get("original_text", ""))
 
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
@@ -81,7 +81,7 @@ class TopicsAndQuestionsRAGView(APIView):
                 filter={"genealogy": True, "user_id": str(user_id)}  # genealogy와 user_id 필터 결합
             )
             for match in genealogy_query_result.get("matches", []):
-                genealogy_related_contexts.append(match["metadata"].get("text", ""))
+                genealogy_related_contexts.append(match["metadata"].get("original_text", ""))
 
             genealogy_context = "\n".join([ctx.strip() for ctx in genealogy_related_contexts if ctx])
 
@@ -190,7 +190,8 @@ class TopicsAndQuestionsRAGView(APIView):
             return Response({
                 "topics": topics,
                 "multiple_choices": multiple_choices,  # 클라이언트에 객관식 반환
-                "subjectives": subjectives  # 클라이언트에 주관식 반환
+                "subjectives": subjectives,  # 클라이언트에 주관식 반환
+                "related_context": related_context  # related_context 추가 반환
             })
 
         except Exception as e:
