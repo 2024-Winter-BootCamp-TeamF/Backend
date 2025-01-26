@@ -71,13 +71,13 @@ class TopicsAndQuestionsRAGView(APIView):
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
 
-            # genealogy 메타데이터에 기반한 데이터 수집 (user_id 기반 검색 추가)
+            # genealogy 메타데이터에 기반한 데이터 수집
             genealogy_related_contexts = []
             genealogy_query_result = pinecone_index.query(
-                namespace="default",
+                namespace=str(user_id),
                 top_k=10,
                 include_metadata=True,
-                filter={"genealogy": True}  # 기출 문제 데이터만 수집
+                filter={"category": "genealogy"}  # 기출 문제 데이터만 수집
             )
             for match in genealogy_query_result.get("matches", []):
                 genealogy_related_contexts.append(match["metadata"].get("original_text", ""))
