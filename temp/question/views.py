@@ -60,11 +60,10 @@ class TopicsAndQuestionsRAGView(APIView):
             for topic in topics:
                 # Pinecone에서 검색 수행
                 query_result = pinecone_index.query(
-                    namespace="default",
+                    namespace=str(user_id),
                     top_k=10,
                     include_metadata=True,
                     vector=get_embedding(topic),  # 토픽에 대한 벡터 생성
-                    filter={"user_id": str(user_id)}  # metadata의 user_id 필터 추가
                 )
                 for match in query_result.get("matches", []):
                     related_contexts.append(match["metadata"].get("original_text", ""))
@@ -78,7 +77,7 @@ class TopicsAndQuestionsRAGView(APIView):
                 namespace="default",
                 top_k=10,
                 include_metadata=True,
-                filter={"genealogy": True, "user_id": str(user_id)}  # genealogy와 user_id 필터 결합
+                filter={"genealogy": True}  # 기출 문제 데이터만 수집
             )
             for match in genealogy_query_result.get("matches", []):
                 genealogy_related_contexts.append(match["metadata"].get("original_text", ""))
@@ -191,7 +190,6 @@ class TopicsAndQuestionsRAGView(APIView):
                 "topics": topics,
                 "multiple_choices": multiple_choices,  # 클라이언트에 객관식 반환
                 "subjectives": subjectives,  # 클라이언트에 주관식 반환
-                "related_context": related_context  # related_context 추가 반환
             })
 
         except Exception as e:
