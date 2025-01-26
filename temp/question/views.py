@@ -60,29 +60,37 @@ class TopicsAndQuestionsRAGView(APIView):
             for topic in topics:
                 # Pinecone에서 검색 수행
                 query_result = pinecone_index.query(
-                    namespace="default",
+                    namespace=str(user_id),
                     top_k=10,
                     include_metadata=True,
-                    vector=get_embedding(topic)  # 토픽에 대한 벡터 생성
+                    vector=get_embedding(topic),  # 토픽에 대한 벡터 생성
                 )
                 for match in query_result.get("matches", []):
-                    related_contexts.append(match["metadata"].get("text", ""))
+                    related_contexts.append(match["metadata"].get("original_text", ""))
 
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
 
             # genealogy 메타데이터에 기반한 데이터 수집
             genealogy_related_contexts = []
-            genealogy_query_result = pinecone_index.query(
-                namespace="default",
-                top_k=10,
-                include_metadata=True,
-                filter={"genealogy": True}  # genealogy 메타데이터 필터
-            )
-            for match in genealogy_query_result.get("matches", []):
-                genealogy_related_contexts.append(match["metadata"].get("text", ""))
 
-            genealogy_context = "\n".join([ctx.strip() for ctx in genealogy_related_contexts if ctx])
+            # "category"가 "genealogy"인 데이터를 필터링하여 검색
+            genealogy_query_result = pinecone_index.query(
+                vector=[0] * 1536,
+                namespace=str(user_id),  # 사용자 네임스페이스 지정
+                top_k=10,
+                include_metadata=True,  # 메타데이터를 포함
+                filter={"category": "genealogy"}  # "category"가 "genealogy"인 데이터만 필터링
+            )
+
+            # 검색된 결과에서 "original_text"를 수집
+            for match in genealogy_query_result.get("matches", []):
+                original_text = match["metadata"].get("original_text", "")
+                if original_text:  # original_text가 존재하는 경우만 추가
+                    genealogy_related_contexts.append(original_text.strip())
+
+            # 관련 텍스트를 하나로 결합
+            genealogy_context = "\n".join(genealogy_related_contexts)
 
             # 객관식 생성 위한 OpenAI API 호출
             multiple_choice_prompt = (
@@ -102,12 +110,12 @@ class TopicsAndQuestionsRAGView(APIView):
                 "주의사항:\n"
                 "- JSON 배열 형식만 반환하세요.\n"
                 "- 총 7개의 객관식 문제만 생성하세요.\n"
-                "- 각 문제는 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
+                "- 각 문제는 관련 텍스트에 포함된 정보만 바탕으로 생성하세요.\n"
                 "- 문제는 genealogy와 연관된 기존 문제와 유사하게 생성해야 합니다.\n"
                 "- JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n\n"
                 f"주제 목록: {', '.join(topics)}\n\n"
                 f"관련 텍스트: {related_context}\n\n"
-                f"genealogy와 관련된 기존 텍스트:\n{genealogy_context}\n"
+                f"genealogy와 관련된 기존 문제:\n{genealogy_context}\n"
             )
 
             multiple_choice_result = ask_openai(multiple_choice_prompt, max_tokens=4096)
@@ -189,7 +197,7 @@ class TopicsAndQuestionsRAGView(APIView):
             return Response({
                 "topics": topics,
                 "multiple_choices": multiple_choices,  # 클라이언트에 객관식 반환
-                "subjectives": subjectives  # 클라이언트에 주관식 반환
+                "subjectives": subjectives,  # 클라이언트에 주관식 반환
             })
 
         except Exception as e:

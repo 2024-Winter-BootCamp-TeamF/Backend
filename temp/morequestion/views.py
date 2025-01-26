@@ -69,7 +69,8 @@ class RegenerateQuestionsAPIView(APIView):
                     namespace="default",
                     top_k=10,
                     include_metadata=True,
-                    vector=get_embedding(topic)
+                    vector=get_embedding(topic),
+                    filter={"user_id": str(request.user.id)} # user_id 필터 추가
                 )
                 for match in query_result.get("matches", []):
                     related_contexts.append(match["metadata"].get("text", ""))
