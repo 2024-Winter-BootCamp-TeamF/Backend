@@ -73,16 +73,24 @@ class TopicsAndQuestionsRAGView(APIView):
 
             # genealogy 메타데이터에 기반한 데이터 수집
             genealogy_related_contexts = []
-            genealogy_query_result = pinecone_index.query(
-                namespace=str(user_id),
-                top_k=10,
-                include_metadata=True,
-                filter={"category": "genealogy"}  # 기출 문제 데이터만 수집
-            )
-            for match in genealogy_query_result.get("matches", []):
-                genealogy_related_contexts.append(match["metadata"].get("original_text", ""))
 
-            genealogy_context = "\n".join([ctx.strip() for ctx in genealogy_related_contexts if ctx])
+            # "category"가 "genealogy"인 데이터를 필터링하여 검색
+            genealogy_query_result = pinecone_index.query(
+                vector=[0] * 1536,
+                namespace=str(user_id),  # 사용자 네임스페이스 지정
+                top_k=10,
+                include_metadata=True,  # 메타데이터를 포함
+                filter={"category": "genealogy"}  # "category"가 "genealogy"인 데이터만 필터링
+            )
+
+            # 검색된 결과에서 "original_text"를 수집
+            for match in genealogy_query_result.get("matches", []):
+                original_text = match["metadata"].get("original_text", "")
+                if original_text:  # original_text가 존재하는 경우만 추가
+                    genealogy_related_contexts.append(original_text.strip())
+
+            # 관련 텍스트를 하나로 결합
+            genealogy_context = "\n".join(genealogy_related_contexts)
 
             # 객관식 생성 위한 OpenAI API 호출
             multiple_choice_prompt = (
