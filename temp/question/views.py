@@ -319,6 +319,9 @@ class SubmitAnswerAPIView(APIView):
                 explanation=explanation
             )
 
+            question.is_answer = True
+            question.save()
+
             # 결과 반환
             return Response({
                 "question_id": question_id,
@@ -326,6 +329,7 @@ class SubmitAnswerAPIView(APIView):
                 "user_answer": user_answer,
                 "correct_answer": correct_answer,
                 "is_correct": is_correct,
+                "is_answer" : question.is_answer,
                 "explanation": explanation
             })
 
