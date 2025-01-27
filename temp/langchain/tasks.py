@@ -115,3 +115,34 @@ def generate_summary_and_pdf(request, user_id, topics, top_k):
         return {"status": "error", "message": "No summaries generated."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@shared_task
+def generate_summary_for_topic(user_id, topic, top_k):
+    """
+    특정 토픽에 대해 Pinecone 데이터를 가져오고 요약 생성
+    """
+    try:
+        # Pinecone 인스턴스 및 인덱스 가져오기
+        instance = get_pinecone_instance()
+        index_name = os.getenv("PINECONE_INDEX_NAME", "teamf")
+
+        # Pinecone에서 토픽 관련 데이터 가져오기
+        user_data = get_user_data_by_topic(instance, index_name, user_id, topic, top_k)
+        if not user_data:
+            return {"topic": topic, "status": "error", "message": "No data found for the topic."}
+
+        # 텍스트 합치기 및 요약 생성
+        combined_text = "\n".join([data["original_text"] for data in user_data])
+        summary_result = summarize_text_with_gpt(combined_text)
+
+        if summary_result and summary_result.get("success"):
+            return {
+                "topic": topic,
+                "status": "success",
+                "summary_text": summary_result["response"]  # 요약된 텍스트 반환
+            }
+        else:
+            return {"topic": topic, "status": "error", "message": "Failed to summarize text."}
+
+    except Exception as e:
+        return {"topic": topic, "status": "error", "message": str(e)}

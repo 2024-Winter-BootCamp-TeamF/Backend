@@ -3,12 +3,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .tasks import delete_user_data_from_pinecone, generate_summary_and_pdf
+from .tasks import delete_user_data_from_pinecone, generate_summary_and_pdf, generate_summary_for_topic
 from .utils import text_to_pdf
 from user.models import UserSummary
 from rest_framework.permissions import IsAuthenticated
 from django.http import FileResponse, Http404
 from temp.pinecone.models import PineconeSummary
+from celery import group
+from .utils import generate_pdf_from_summaries
+
 
 class SummaryAPIView(APIView):
     """
@@ -59,12 +62,28 @@ class SummaryAPIView(APIView):
         if not topics or not isinstance(topics, list):
             return Response({"error": "Topics are required and must be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = generate_summary_and_pdf(request, user_id, topics, top_k)
-        if result["status"] == "success":
-            return Response(result, status=status.HTTP_200_OK)
-        else:
-            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # Celery 그룹 태스크 실행
+            task_group = group([generate_summary_for_topic.s(user_id, topic, top_k) for topic in topics])
+            group_result = task_group.apply_async()
 
+            # 모든 태스크 결과를 기다림
+            task_results = group_result.get()  # 모든 태스크가 완료될 때까지 대기
+
+            # 성공적으로 처리된 요약 리스트 생성
+            summaries = [result for result in task_results if result["status"] == "success"]
+
+            if summaries:
+                # PDF 생성
+                pdf_path = generate_pdf_from_summaries(user_id, summaries)
+                pdf_url = request.build_absolute_uri(f"/{pdf_path}")
+                return Response({"status": "success", "pdf_url": pdf_url}, status=status.HTTP_200_OK)
+
+            return Response({"status": "error", "message": "No summaries generated."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DeleteUserDataView(APIView):
     """
