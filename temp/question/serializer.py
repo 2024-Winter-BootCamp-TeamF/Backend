@@ -13,4 +13,4 @@ class WrongAnswerSerializer(serializers.ModelSerializer):
 class AllQuestionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = ['id', 'question_type', 'question_topic', 'question_text', 'choices', 'answer', 'created_at']
+        fields = ['id', 'question_type', 'question_topic', 'question_text', 'choices', 'answer', 'is_answer', 'created_at']
