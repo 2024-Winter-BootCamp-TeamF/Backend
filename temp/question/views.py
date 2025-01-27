@@ -340,11 +340,11 @@ class SubmitAnswerAPIView(APIView):
 
 class DeleteQuestionView(APIView):
     """
-    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    특정 사용자가 자신의 특정 문제 데이터를 삭제하는 API
     """
 
     @swagger_auto_schema(
-        operation_description="Delete a summary by ID if the user is authorized",
+        operation_description="특정 사용자가 자신의 특정 문제 데이터를 삭제하는 API",
         responses={
             200: openapi.Response(description="Question deleted successfully"),
             404: openapi.Response(description="Question not found or not authorized to delete"),
@@ -371,11 +371,11 @@ class DeleteQuestionView(APIView):
 
 class DeleteUserAnswerView(APIView):
     """
-    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    특정 사용자가 자신의 정답 데이터를 삭제하는 API
     """
 
     @swagger_auto_schema(
-        operation_description="Delete a summary by ID if the user is authorized",
+        operation_description="특정 사용자가 자신의 정답 데이터를 삭제하는 API",
         responses={
             200: openapi.Response(description="Summary deleted successfully"),
             404: openapi.Response(description="Summary not found or not authorized to delete"),

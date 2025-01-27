@@ -25,7 +25,7 @@ class UploadAllToPineconeView(APIView):
     permission_classes = [IsAuthenticated]  # 토큰 인증 필요
 
     @swagger_auto_schema(
-        operation_description="Upload all Redis data to Pinecone",
+        operation_description="모든 Redis 데이터를 Pinecone에 업로드하는 API",
         responses={
             200: openapi.Response(description="All data uploaded successfully"),
             500: openapi.Response(description="Internal server error"),

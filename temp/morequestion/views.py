@@ -66,14 +66,13 @@ class RegenerateQuestionsAPIView(APIView):
             related_contexts = []
             for topic in topics:
                 query_result = pinecone_index.query(
-                    namespace="default",
+                    namespace=str(request.user.id),
                     top_k=10,
                     include_metadata=True,
                     vector=get_embedding(topic),
-                    filter={"user_id": str(request.user.id)} # user_id 필터 추가
                 )
                 for match in query_result.get("matches", []):
-                    related_contexts.append(match["metadata"].get("text", ""))
+                    related_contexts.append(match["metadata"].get("original_text", ""))
 
             # 연관 데이터를 하나의 컨텍스트로 결합
             related_context = "\n".join([ctx.strip() for ctx in related_contexts if ctx])
@@ -269,11 +268,11 @@ class DeleteMoreQuestionView(APIView):
 
 class DeleteUserAnswerView(APIView):
     """
-    특정 사용자가 자신의 요약 데이터를 삭제하는 API
+    특정 사용자가 자신의 추가 연습묹제 특정 정답 데이터를 삭제하는 API
     """
 
     @swagger_auto_schema(
-        operation_description="Delete a summary by ID if the user is authorized",
+        operation_description="특정 사용자가 자신의 추가 연습묹제 특정 정답 데이터를 삭제하는 API",
         responses={
             200: openapi.Response(description="Summary deleted successfully"),
             404: openapi.Response(description="Summary not found or not authorized to delete"),

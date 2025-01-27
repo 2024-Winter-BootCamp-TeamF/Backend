@@ -20,7 +20,7 @@ class SummaryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Generate summaries for the given topics and return a PDF URL.",
+        operation_description="주제별 요약을 생성하고 PDF URL 반환",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -92,7 +92,7 @@ class DeleteUserDataView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Delete all Pinecone data for the current user.",
+        operation_description="현재 사용자의 Pinecone 데이터를 모두 삭제하는 API",
         responses={
             202: "Data deletion task started successfully.",
             500: "Internal server error.",
@@ -147,7 +147,7 @@ class DeleteSummaryView(APIView):
     """
 
     @swagger_auto_schema(
-        operation_description="Delete a summary by ID if the user is authorized",
+        operation_description="특정 사용자가 자신의 특정 요약 데이터를 삭제하는 API",
         responses={
             200: openapi.Response(description="Summary deleted successfully"),
             404: openapi.Response(description="Summary not found or not authorized to delete"),
