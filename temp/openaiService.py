@@ -64,7 +64,7 @@ def ask_openai(prompt: str, model: str = "gpt-3.5-turbo", max_tokens: int = 2048
         }
 logger = logging.getLogger(__name__)
 
-def ask_openai_with_continue(prompt: str, model: str = "gpt-4", max_tokens: int = 2048, temperature: float = 0.7) -> dict:
+def ask_openai_with_continue(prompt: str, model: str = "gpt-3.5-turbo", max_tokens: int = 2048, temperature: float = 0.7) -> dict:
     """
     OpenAI API와 통신하여 끊긴 응답을 처리하고 이어받습니다.
     """
