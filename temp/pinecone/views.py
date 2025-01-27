@@ -1,6 +1,5 @@
 import os
 import redis
-import json
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,11 +9,8 @@ from drf_yasg import openapi
 from collections import defaultdict
 from .tasks import upload_file_id_to_pinecone_task
 from .service import (
-    get_pinecone_index,
     get_pinecone_instance,
-    query_pinecone_data,
-    query_pinecone_original_text,
-    process_and_save_summary
+    query_pinecone_data
 )
 from temp.openaiService import get_embedding
 
@@ -116,3 +112,4 @@ class QueryFromPineconeView(APIView):
 
         except Exception as e:
             return Response({"error": f"Failed to query Pinecone: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
