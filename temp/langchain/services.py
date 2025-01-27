@@ -29,7 +29,7 @@ def get_pinecone_index(instance, index_name):
 
 
 # 특정 사용자(user_id)의 모든 데이터를 Pinecone에서 가져오기
-def get_user_data_by_topic(instance, index_name, user_id, topic, top_k):
+def get_user_data_by_topic(instance, index_name, user_id, topic):
     """
     Pinecone에서 특정 사용자가 올린 데이터 중 주제와 관련된 데이터를 가져옵니다.
     """
@@ -43,7 +43,7 @@ def get_user_data_by_topic(instance, index_name, user_id, topic, top_k):
         response = index.query(
             vector=topic_embedding,
             namespace=str(user_id),  # 유저 ID로 네임스페이스 필터링
-            top_k=top_k,  # 최대 top_k개의 결과 반환
+            top_k=10,  # 최대 top_k개의 결과 반환
             include_metadata=True,  # 메타데이터 포함
         )
 

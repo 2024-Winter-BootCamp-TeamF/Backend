@@ -7,7 +7,6 @@ from io import BytesIO
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-
 # 한국어 폰트 등록
 FONT_NAME = "NanumGothic"
 FONT_PATH = settings.FONT_PATH  # settings.py에서 정의한 경로 사용
@@ -19,7 +18,7 @@ LEFT_MARGIN = 50  # 왼쪽 여백
 RIGHT_MARGIN = 50  # 오른쪽 여백
 TOP_MARGIN = 50  # 상단 여백
 BOTTOM_MARGIN = 50  # 하단 여백
-LINE_HEIGHT = 15  # 줄 간격
+LINE_HEIGHT = 20  # 줄 간격
 
 def text_to_pdf(topic_summaries):
     """
@@ -116,11 +115,12 @@ def generate_pdf_from_summaries(user_id, summaries):
         pdf.setFont(FONT_NAME, 15)
         pdf.drawString(LEFT_MARGIN, y_position, f"Topic: {summary['topic']}")
         y_position -= LINE_HEIGHT
+        y_position -= LINE_HEIGHT
 
         # 페이지 하단에 도달하면 새 페이지로 전환
         if y_position < BOTTOM_MARGIN:
             pdf.showPage()
-            pdf.setFont(FONT_NAME, 15)
+            pdf.setFont(FONT_NAME, 16)
             y_position = PAGE_HEIGHT - TOP_MARGIN
 
         # 요약 텍스트 출력 (크기 12)
