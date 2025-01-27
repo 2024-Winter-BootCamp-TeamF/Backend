@@ -39,7 +39,7 @@ def get_embedding(text, model="text-embedding-ada-002"):
     except Exception as e:
         raise ValueError(f"Failed to generate embedding: {str(e)}")
 
-def ask_openai(prompt: str, model: str = "gpt-4", max_tokens: int = 2048, temperature: float = 0.7) -> dict:
+def ask_openai(prompt: str, model: str = "gpt-3.5-turbo", max_tokens: int = 2048, temperature: float = 0.7) -> dict:
     """
     OpenAI API와 통신하여 답변을 반환합니다.
     """
