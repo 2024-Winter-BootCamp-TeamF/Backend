@@ -28,11 +28,6 @@ class SummaryAPIView(APIView):
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Items(type=openapi.TYPE_STRING),
                     description="List of topics to generate summaries for (e.g., ['AI', 'Machine Learning']).",
-                ),
-                "top_k": openapi.Schema(
-                    type=openapi.TYPE_INTEGER,
-                    description="Number of top results to retrieve for each topic.",
-                    default=10
                 )
             },
             required=["topics"],
@@ -57,14 +52,13 @@ class SummaryAPIView(APIView):
     def post(self, request):
         user_id = request.user.id
         topics = request.data.get("topics")
-        top_k = request.data.get("top_k", 10)
 
         if not topics or not isinstance(topics, list):
             return Response({"error": "Topics are required and must be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Celery 그룹 태스크 실행
-            task_group = group([generate_summary_for_topic.s(user_id, topic, top_k) for topic in topics])
+            task_group = group([generate_summary_for_topic.s(user_id, topic) for topic in topics])
             group_result = task_group.apply_async()
 
             # 모든 태스크 결과를 기다림

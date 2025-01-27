@@ -7,7 +7,7 @@ from user.models import UserSummary  # Django 모델 import
 
 
 @shared_task
-def process_summary_task(user_id, topic, top_k):
+def process_summary_task(user_id, topic):
     """
     유저 ID와 주제를 기반으로 Pinecone에서 데이터를 검색하고 요약을 생성하는 Celery 작업
     """
@@ -17,7 +17,7 @@ def process_summary_task(user_id, topic, top_k):
         index_name = os.getenv("PINECONE_INDEX_NAME", "teamf")
 
         # 주제와 관련된 데이터 가져오기
-        user_data = get_user_data_by_topic(instance, index_name, user_id, topic, top_k)
+        user_data = get_user_data_by_topic(instance, index_name, user_id, topic)
 
         # 데이터가 없을 경우 에러 반환
         if not user_data:
@@ -84,7 +84,7 @@ def delete_user_data_from_pinecone(user_id):
             "message": f"Failed to delete data for user ID {user_id}: {str(e)}"
         }
 
-def generate_summary_and_pdf(request, user_id, topics, top_k):
+def generate_summary_and_pdf(request, user_id, topics):
     """
     여러 토픽에 대해 요약을 생성하고 PDF로 저장
     """
@@ -94,7 +94,7 @@ def generate_summary_and_pdf(request, user_id, topics, top_k):
 
         summaries = []
         for topic in topics:
-            user_data = get_user_data_by_topic(instance, index_name, user_id, topic, top_k)
+            user_data = get_user_data_by_topic(instance, index_name, user_id, topic)
             if not user_data:
                 continue
 
@@ -117,7 +117,7 @@ def generate_summary_and_pdf(request, user_id, topics, top_k):
         return {"status": "error", "message": str(e)}
 
 @shared_task
-def generate_summary_for_topic(user_id, topic, top_k):
+def generate_summary_for_topic(user_id, topic):
     """
     특정 토픽에 대해 Pinecone 데이터를 가져오고 요약 생성
     """
@@ -127,7 +127,7 @@ def generate_summary_for_topic(user_id, topic, top_k):
         index_name = os.getenv("PINECONE_INDEX_NAME", "teamf")
 
         # Pinecone에서 토픽 관련 데이터 가져오기
-        user_data = get_user_data_by_topic(instance, index_name, user_id, topic, top_k)
+        user_data = get_user_data_by_topic(instance, index_name, user_id, topic)
         if not user_data:
             return {"topic": topic, "status": "error", "message": "No data found for the topic."}
 
