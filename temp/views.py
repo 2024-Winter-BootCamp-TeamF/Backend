@@ -17,7 +17,7 @@ class ProcessRedisDataView(APIView):
     """
 
     @swagger_auto_schema(
-        operation_description="Process multiple files by action type",
+        operation_description="Redis 데이터를 처리하여 요약 또는 문제를 생성하는 API",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
