@@ -13,6 +13,7 @@ class MoreQuestion(models.Model):
     question_topic = models.CharField(max_length=255)
     question_text = models.TextField()
     choices = models.JSONField(null=True, blank=True)  # 객관식 선택지 저장
+    is_answer = models.BooleanField(default=False)
     answer = models.TextField()
 
     created_at = models.DateTimeField(auto_now_add=True)
