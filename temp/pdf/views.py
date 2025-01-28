@@ -199,7 +199,12 @@ class GenealogyUploadView(APIView):
                 base_name, extension = os.path.splitext(file_name)
                 file_name = f"{base_name}_족보{extension}"
 
-            file_instance = UploadedPDF(file=uploaded_file, file_name=file_name)
+            # PDF 객체 생성 및 저장
+            file_instance = UploadedPDF(
+                file=uploaded_file,
+                file_name=file_name,
+                user=request.user  # 현재 요청한 사용자 정보 추가
+            )
             file_instance.save()
 
             # 임시 경로에 파일 저장
